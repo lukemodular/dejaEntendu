@@ -32,8 +32,8 @@ void setup() {
 void loop() {
   int i, j;
 
-  char text[28] = "HELLO DEJA ENTENDU IS NEAR";
-  //char text[28] = "Hello deja entendu is Near";
+  char text[] = "HELLO DEJA ENTENDU IS NEAR";
+  //char text[] = "Hello deja entendu is Near";
 
   matrix.setFont(font4x4);
   //matrix.setFont(font4x8_ansi);
