@@ -46,10 +46,10 @@ void loop() {
   r = random(220, 255);
   g = random(220, 255);
   b = random(220, 255);
-  letter = text[i];            //?????doen't work without this line
+  letter = text[i];            //?????, doen't work without this line
   for (int y = 0; y < 32; y = y + 4) {
     for (int x = 0; x < 32; x = x + 4) {
-      matrix.drawChar(x, y, {r, g, b}, text[i]);  //random(65, 90) 90, 122
+      matrix.drawChar(x, y, {r, g, b}, text[i]);  //random(65, 90) 122
       matrix.swapBuffers(true);
       delay(100);
       i++;
