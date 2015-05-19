@@ -1,8 +1,8 @@
 (
 p = SerialPort(
     "/dev/ttyACM0",
-    baudrate: 230400,
-    crtscts: false);
+    baudrate: 230400,    //115200, 230400
+	crtscts: false);
 );
 
 //SerialPort.devices;
@@ -92,7 +92,7 @@ loop{
 		envirStream = envir.asArray;
 		p.putAll(envirStream);
 		envirStream.postln;
-		1.wait;
+		0.7.wait;
 
 	cols.do{|x|
 		rows.do{|y|

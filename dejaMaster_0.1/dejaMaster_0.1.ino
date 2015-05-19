@@ -11,6 +11,7 @@ char frameBuf[1024];
 byte x_msg;
 byte y_msg;
 byte c_msg;
+int baudrate;
 
 
 // -------------------------------------------------------------
@@ -25,6 +26,10 @@ void setup(void)
 
 // -------------------------------------------------------------
 void loop(void) {
+  
+  baudrate = Serial.baud();
+  Serial.print("Baudrate: ");
+  Serial.println(baudrate);
 
   while (Serial.available()) {
     digitalWrite(led, 1);
@@ -42,7 +47,7 @@ void loop(void) {
         for (int idn = 0; idn < nodes; ++idn ) {
           msg.id = idn;
           CANbus.write(msg);
-          delay(2);
+          //delay(2);
         }
         j = 0;
       }
