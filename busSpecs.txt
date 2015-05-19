@@ -1,0 +1,24 @@
+102 pannels
+102 * 32 * 32 = 104448 LED's
+17 colums x 6 rows
+544 * 192 pixels
+136 * 32 letterPixel (type: 4*6)
+
+
+LED:
+@panneau(filterNumber)
+lettre(x, y, luminosity(0..255), color?, polis?)
+-scrollText("itemInListOnTeensy", startX, startY, mode)
+
+frameHold???
+
+son:
+-freq
+-longeur
+-attack
+-release
+
+afficheur general:
+@panneau(filterNumber)
+-intensité luminosité
+-intensité volume
