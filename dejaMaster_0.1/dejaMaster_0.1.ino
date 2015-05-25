@@ -3,7 +3,7 @@
 
 #include <FlexCAN.h>
 
-byte nodes = 2;
+byte nodes = 3;
 byte led = 13;
 FlexCAN CANbus(1000000);
 static CAN_message_t msg;
@@ -27,10 +27,6 @@ void setup(void)
 // -------------------------------------------------------------
 void loop(void) {
   
-  baudrate = Serial.baud();
-  Serial.print("Baudrate: ");
-  Serial.println(baudrate);
-
   while (Serial.available()) {
     digitalWrite(led, 1);
     Serial.readBytes(frameBuf, 1024);
@@ -47,7 +43,7 @@ void loop(void) {
         for (int idn = 0; idn < nodes; ++idn ) {
           msg.id = idn;
           CANbus.write(msg);
-          //delay(2);
+          delay(2);
         }
         j = 0;
       }

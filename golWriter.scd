@@ -5,12 +5,14 @@ p = SerialPort(
 	crtscts: false);
 );
 
+
 //SerialPort.devices;
 //p.close;    // close the port
 //SerialPort.closeAll;    // close all ports
 
 Tdef(\golWriter).play;
 Tdef(\golWriter).stop;
+
 
 ///////////////
 //FrameWriter
@@ -91,8 +93,9 @@ loop{
 	};
 		envirStream = envir.asArray;
 		p.putAll(envirStream);
+		envirStream.size.postln;
 		envirStream.postln;
-		0.7.wait;
+	1.0.wait;
 
 	cols.do{|x|
 		rows.do{|y|
@@ -119,7 +122,7 @@ loop{
 		};
 	};
 	envir= copy.deepCopy;
-		0.1.wait;
+		//0.1.wait;
 
 };
 });
@@ -133,8 +136,15 @@ p.put(0);
 p.put(8);
 
 p.putAll(Int8Array[1, 1, 8]);
-p.putAll(Int8Array[1, 1, 0]);
+p.putAll(Int8Array[1, 32, 12, 12, 1, 32, 12, 12, 1, 32, 12, 12, 1, 32, 12, 12]);
 
+(
+r = Routine({p.putAll(Int8Array[
+	1, 32, 12, 12, 1, 32, 12, 12, 1, 32, 12, 12, 1, 32, 12, 12,
+	1, 32, 12, 12, 1, 32, 12, 12, 1, 32, 12, 12, 1, 32, 12, 12,
+	1, 32, 12, 12, 1, 32, 12, 12, 1, 32, 12, 12, 1, 32, 12, 12,
+	1, 32, 12, 12, 1, 32, 12, 12, 1, 32, 12, 12, 1, 32, 12, 12]);}).play;
+);
 
 (
 r= Routine({

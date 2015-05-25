@@ -1,24 +1,24 @@
 102 pannels
 102 * 32 * 32 = 104448 LED's
-17 colums x 6 rows
-544 * 192 pixels
-136 * 32 letterPixel (type: 4*6)
+
+pannelResolution: 17 colums x 6 rows panels
+pxilelResolution: 544 * 192 pixels
+
+136 * 48 letterPixel (type: 4x4)
+136 * 32 letterPixel (type: 4x6)
 
 
 LED:
-@panneau(filterNumber)
-lettre(x, y, luminosity(0..255), color?, polis?)
--scrollText("itemInListOnTeensy", startX, startY, mode)
-
-frameHold???
+@pannel(idNumber, 0..101)
+ledMsgType1: drawCharacter(character(0..127), x(0..31), y(0..31), color(3x 0..255), typeSet(0..1)//4x4 or 4x6)
+ledMsgType2: scrollText(startY(0..31), color(3x 0..255), typeSet(0..1)//4x4 or 4x6, scrollSpeed(0..127), scrollRotation(0..3)//0°, 90°, 180°, 270°, "WhichStringOnTeensy"(0..63))
 
 son:
--freq
--longeur
--attack
--release
+@pannel(idNumber, 0..101)
+audioMsgType1: noteOn(freq(100..10000), length(1..1000), attack(0..100), release(1..100))
 
 afficheur general:
-@panneau(filterNumber)
--intensité luminosité
--intensité volume
+@allPannels(id: 000)
+masterMsgType1: brigthness(0..127)
+masterMsgType2: masterVol(0..127)  
+masterMsgType3: masterRotation(0..1)  //0°, 180°

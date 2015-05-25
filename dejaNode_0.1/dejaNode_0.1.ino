@@ -72,26 +72,30 @@ AudioConnection          patchCord2(envelope1, out);
 int noteLength;
 
 
-//______________________________________________________________
-//hexDum
-
-//static void hexDump(uint8_t dumpLen, uint8_t *bytePtr)
-//{
-//  uint8_t working;
-//  while ( dumpLen-- ) {
-//    working = *bytePtr++;
-//    Serial.write( hex[ working >> 4 ] );
-//    Serial.write( hex[ working & 15 ] );
-//  }
-//  Serial.write('\r');
-//  Serial.write('\n');
-//}
-
-
 // -------------------------------------------------------------
 void setup() {
+  
+  
+    //____________________________________
+  //SETUP audio
+  AudioMemory(12);
 
-  Serial.begin(115200);
+  waveform1.begin(0.3, 175, WAVEFORM_SINE);
+  //Waveforms: WAVEFORM_SINE, WAVEFORM_SQUARE, WAVEFORM_SAWTOOTH, WAVEFORM_TRIANGLE, WAVEFORM_PULSE, WAVEFORM_ARBITRARY
+  //waveform1.pulseWidth(0.1);
+  envelope1.attack(0);
+  envelope1.hold(0);
+  envelope1.decay(2);
+  envelope1.sustain(0.8);
+  envelope1.release(1);
+  //larger attack and release time leads to clicks (after ~100ms)
+
+  // Initialize processor and memory measurements
+  AudioProcessorUsageMaxReset();
+  AudioMemoryUsageMaxReset();
+  
+
+  //Serial.begin(115200);
 
 
   //___________________________________
@@ -126,28 +130,6 @@ void setup() {
   matrix.setBrightness(defaultBrightness);
   matrix.setColorCorrection(cc24);
   //matrix.setRotation(rotation180);
-
-
-  //____________________________________
-  //SETUP audio
-  AudioMemory(12);
-
-  waveform1.pulseWidth(0.1);
-  //waveform1.arbitraryWaveform(array, 1000);
-  waveform1.begin(0.1, 175, WAVEFORM_SINE);
-  //Waveforms: WAVEFORM_SINE, WAVEFORM_SQUARE, WAVEFORM_SAWTOOTH, WAVEFORM_TRIANGLE, WAVEFORM_PULSE, WAVEFORM_ARBITRARY
-  //fm1.amplitude(0.5);
-  //fm1.frequency(200);
-  envelope1.attack(5);
-  envelope1.hold(0);
-  envelope1.decay(2);
-  envelope1.sustain(0.8);
-  envelope1.release(5);
-  //larger attack and release time leads to clicks (after ~100ms)
-
-  // Initialize processor and memory measurements
-  AudioProcessorUsageMaxReset();
-  AudioMemoryUsageMaxReset();
 
 
   sysTimer.reset();
@@ -186,7 +168,6 @@ void loop() {
 
   if (!canTimer) {
     while ( CANbus.read(rxmsg) ) {
-        //hexDump( sizeof(rxmsg), (uint8_t *)&rxmsg );
 //             Serial.print("msg.id: ");
 //              Serial.println(rxmsg.id, HEX);
 //              Serial.print("msg.extended: ");
@@ -217,7 +198,7 @@ void loop() {
     //waveform1.amplitude(0.3*random(1, 5));
     envelope1.noteOn();
     //noteLength = random(500, 4000);
-    noteLength = 100;
+    noteLength = 2;
     noteOnTimer = 2000;        //note happend???
     noteOffTimer = noteLength;
   }
@@ -257,6 +238,12 @@ void loop() {
       }
     }
     ledTimer = 20;
+            //matrix.setScrollColor({0xff, 0xff, 0xff});
+        //matrix.setScrollMode(wrapForward);
+        //matrix.setScrollSpeed(40);
+    //matrix.setScrollOffsetFromEdge(y);
+            //matrix.setScrollFont(font5x7);
+        //matrix.scrollText("Position Scrolling Text Anywhere", 1);
   }
 
   //_________________________________
