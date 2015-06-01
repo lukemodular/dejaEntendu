@@ -215,6 +215,8 @@ void loop() {
     for (int x = 0; x < 32; x++) {
       for (int y = 0; y < 32; y++) {
         if (frameBuf[pxlCount] == 1) {
+          //matrix.drawChar(x, y, {r, g, b}, text[i]);  //random(65, 90) 122
+          //matrix.swapBuffers(true);
           c_msg = 255;
           green = map(c_msg, 0, 255, 0, 230);
           blue = map(c_msg, 0, 255, 0, 240);

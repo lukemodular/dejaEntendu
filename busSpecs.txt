@@ -10,15 +10,19 @@ pxilelResolution: 544 * 192 pixels
 
 LED:
 @pannel(idNumber, 0..101)
-ledMsgType1: drawCharacter(character(0..127), x(0..31), y(0..31), color(3x 0..255), typeSet(0..1)//4x4 or 4x6)
-ledMsgType2: scrollText(startY(0..31), color(3x 0..255), typeSet(0..1)//4x4 or 4x6, scrollSpeed(0..127), scrollRotation(0..3)//0°, 90°, 180°, 270°, "WhichStringOnTeensy"(0..63))
+ledMsgType1: drawCharacter(character(0..127), x(0..31), y(0..31), color(3x 0..127), typeSet(0..1)//4x4 or 4x6)
+ledMsgType2: scrollText(startY(0..31), color(3x 0..127), typeSet(0..1)//4x4 or 4x6, scrollSpeed(0..127), scrollRotation(0..3)//0°, 90°, 180°, 270°, "WhichStringOnTeensy"(0..127))
 
 son:
 @pannel(idNumber, 0..101)
-audioMsgType1: noteOn(freq(100..10000), length(1..1000), attack(0..100), release(1..100))
+audioMsgType1: noteOn(freq(0..127), length(0..127), amplitude (0..127), attack(0..127), release(1..127))
+MIDI????
 
 afficheur general:
 @allPannels(id: 000)
 masterMsgType1: brigthness(0..127)
-masterMsgType2: masterVol(0..127)  
-masterMsgType3: masterRotation(0..1)  //0°, 180°
+masterMsgType2: masterVol(0..127)
+
+  
+plus necessaire:
+#masterMsgType3: masterRotation(0..1)  //0°, 180°
