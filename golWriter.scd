@@ -5,19 +5,87 @@ p = SerialPort(
 	crtscts: false);
 );
 
+"Testing Matrix CAN commands".postln;
 
+fork{
 p.putAll("t00020001"); // IDENTIFY all - CAN 0x700+nodeID packet + display on matrix
 p.put(13); // CR
+}.play
 
+fork{
 p.putAll("t00020000"); // IDENTIFY all - CAN 0x700+nodeID packet + with no display on matrix
 p.put(13); // CR
+}.play
 
+fork{
 p.putAll("t01920001"); // IDENTIFY 0x19 (node 25) - CAN 0x719 packet + display on matrix
 p.put(13); // CR
+}.play
 
 
+fork{
 p.putAll("t00020100"); // RESET all
 p.put(13); // CR
+}.play
+
+
+// [LED phrase] 0x200+nodeID cmd=3
+// len 8  bytes 0[cmd] 1[X] 2[Y] 3[R] 4[G] 5[B] 6[font0..1] 7 [phrase index]
+
+fork{
+p.putAll("t2008030410FF00FF0000"); // LED phrase (all) 0 0xFF,0x00,0xFF with font 0x00
+p.put(13); // CR
+}.play
+
+fork{
+p.putAll("t200803020700FFFF0102",); // LED phrase #2 (all) 0x00,0xFF,0xFF with font 0x01
+p.put(13); // CR
+}.play
+
+fork{
+p.putAll("t200803020200FFFF0102"); // LED phrase #2 (all) 0x00,0xFF,0xFF with font 0x01
+p.put(13); // CR
+}.play
+
+// [LED clear display] 0x200+nodeID cmd=0
+// len 4  bytes 0[cmd] 1[R] 2[G] 3[B]
+
+fork{
+p.putAll("t200400402080"); // LED clear display (all) with 0x40,0x20,0x80 color
+p.put(13); // CR
+}.play
+
+
+p.close;    // close the port
+SerialPort.closeAll;    // close all ports
+
+(
+i= 0;
+r= Routine({
+loop{
+	"fade test".postln;
+	i= i+1;
+	if ((i>255),(i=0));
+	        0.01.wait;
+	i.postln;
+};
+}).play;
+)
+
+
+    inf.do{|i|
+       	p.putAll(Int8Array[32.rand, 32.rand, 8.rand]);
+        0.01.wait;
+    };
+
+i= 0;
+loop{
+	"fade test".postln;
+	i= i+1;
+	if ((i>255),(i=0));
+	        0.01.wait;
+	i.asDigits(16).postln;
+};
 
 
 //SerialPort.devices;

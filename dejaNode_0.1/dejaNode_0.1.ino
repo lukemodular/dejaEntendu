@@ -22,6 +22,16 @@ SmartMatrix matrix;
 
 byte led = 13;
 
+const char* phrase[] = { 
+  "deja entendu", 
+  "vraiment pas pire", 
+  "geniale", 
+  "Ostie!"
+};
+
+int phrase_count = 4;
+
+
 //_______________________________________________________________
 //Timing
 Metro sysTimer = Metro(1);// milliseconds
@@ -65,9 +75,7 @@ int pxlCount = 0;
 
 const int defaultBrightness = 100*(255/100);    // full brightness
 //const int defaultBrightness = 15 * (255 / 100); // dim: 15% brightness
-const rgb24 defaultBackgroundColor = {
-  0, 0, 0
-};
+const rgb24 defaultBackgroundColor = { 0, 0, 0 };
 byte colorRand;
 
 char nodeBuffer[16];
@@ -167,7 +175,6 @@ void jumpBootloader(void)
 void setup() {
 
   Serial.begin(115200);
-
 
   //___________________________________
   //SETUP CAN
@@ -315,6 +322,34 @@ void loop() {
           WDOG_REFRESH = 0;
           while(1);  /* wait until reset */
         }
+
+        if ( (rx_cobID==0x200) && (rxmsg.len==4) && (rxmsg.buf[0]==0) ) {
+          Serial.println("[LED: clear display]");
+          matrix.fillScreen({rxmsg.buf[1],rxmsg.buf[2],rxmsg.buf[3]});
+          matrix.swapBuffers(true);
+        } 
+
+        if ( (rx_cobID==0x200) && (rxmsg.len==8) && (rxmsg.buf[0]==3) ) {
+          Serial.println("[LED: phrase]");
+
+          if (rxmsg.buf[7]<=phrase_count) {
+             // display node ID
+            if (rxmsg.buf[6]&0x01) {
+              matrix.setFont(font5x7);
+            } else {
+              matrix.setFont(font3x5);
+            }
+            matrix.fillScreen({0,0,0});
+            matrix.setBrightness(15 * (255 / 100)); // 15% brightness
+            matrix.swapBuffers(true);
+            matrix.drawString(rxmsg.buf[1],rxmsg.buf[2],
+              {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
+              {0,0,0},  // BG color
+              phrase[rxmsg.buf[7]]);
+            matrix.swapBuffers(true);
+          }
+        }
+
             
  //       switch (rx_cobID) 
 
@@ -350,7 +385,7 @@ void loop() {
 
   //_________________________________
   //smartMatrix
-
+#if 0
   if (!ledTimer) {
     int pxlCount = 0;
     matrix.swapBuffers(true);
@@ -384,6 +419,7 @@ void loop() {
     }
     ledTimer = 20;
   }
+#endif
 
   //_________________________________
   //audioNoteOff
