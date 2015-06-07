@@ -95,7 +95,7 @@ loop{
 		p.putAll(envirStream);
 		envirStream.size.postln;
 		envirStream.postln;
-	1.0.wait;
+	1.5.wait;
 
 	cols.do{|x|
 		rows.do{|y|

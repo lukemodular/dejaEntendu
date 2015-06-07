@@ -3,9 +3,8 @@
 
 
 /*TODO:
- -Protocoll Parameter!!!
  (globalLight, globalVolume)
- -pixel Buffer??!?
+ -flags: noteOn, noteOff(--> noteOn), newFrame(1.erease, 2. case(font1, font2, scroll)ds, 3.draw) 
 
  */
 
