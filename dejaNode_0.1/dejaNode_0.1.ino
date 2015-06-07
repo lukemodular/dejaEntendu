@@ -20,6 +20,17 @@
 
 SmartMatrix matrix;
 
+byte led = 13;
+
+//_______________________________________________________________
+//Timing
+Metro sysTimer = Metro(1);// milliseconds
+unsigned int canTimer, ledTimer, monitorTimer, noteOnTimer, noteOffTimer;
+
+
+//_______________________________________________________________
+//variables CAN / nodeID
+
 // passing of nodeID from bootloader done via boot_token variable - defined in linker script (.ld)
 #if 1
 extern int boot_token;
@@ -28,24 +39,16 @@ int boot_token;
 #endif
 uint8_t nodeID;
 
-//_______________________________________________________________
-//Timing
-Metro sysTimer = Metro(1);// milliseconds
-unsigned int canTimer, ledTimer, monitorTimer, noteOnTimer, noteOffTimer;
-
-//_______________________________________________________________
-//variables CAN
-byte led = 13;
-int maskID = 0xFFF;      //bit filtering of filterID's 0x000 opens to all messages, 0xFFF only to the messages specified
+int maskID = 0x07F;      // mask 7-bits for node ID - bit filtering of filterID's 0x000 opens to all messages, 0xFFF only to the messages specified
 int filterID;
-
-// Our adress we listen to
-byte filterid_in_eeprom = 0;
 FlexCAN CANbus(1000000);
 static CAN_message_t rxmsg;
 static CAN_filter_t mask;
 static CAN_filter_t filter;
-static uint8_t hex[17] = "0123456789abcdef";
+
+//_______________________________________________________________
+
+
 byte x_msg;
 byte y_msg;
 byte c_msg;
@@ -112,31 +115,36 @@ void setup() {
 
   //___________________________________
   //SETUP CAN
+  
+  nodeID = boot_token;
+  filterID = (int)nodeID;
 
-  // Pull filter address out of eeprom
-  filterID = 1; //EEPROM.read(filterid_in_eeprom);
   mask.id = maskID;
-  filter.id = filterID;
-  CANbus.begin();  // mask
-//  CANbus.setFilter(filter, 0);
-//  CANbus.setFilter(filter, 1);
-//  CANbus.setFilter(filter, 2);
-//  CANbus.setFilter(filter, 3);
-//  CANbus.setFilter(filter, 4);
-//  CANbus.setFilter(filter, 5);
-//  CANbus.setFilter(filter, 6);
- // CANbus.setFilter(filter, 7);
+
+  CANbus.begin(mask);
+
+  filter.id = 0;   // one mailbox for nodeID 0 (global messages) 
+  CANbus.setFilter(filter, 0);
+
+  filter.id = filterID;  // mailboxes for this nodeID
+  CANbus.setFilter(filter, 1);
+  CANbus.setFilter(filter, 2);
+  CANbus.setFilter(filter, 3);
+  CANbus.setFilter(filter, 4);
+  CANbus.setFilter(filter, 5);
+  CANbus.setFilter(filter, 6);
+
+  filter.id = 127;      // mailbox for bootloader messages 0x7FF
+  CANbus.setFilter(filter, 7);
+  
   pinMode(led, OUTPUT);
   //digitalWrite(led, 1);
 
   delay(2000);
-  Serial.println(F("Hello Teensy 3.1 CAN Test."));
-  Serial.print("filteID: ");
-  Serial.println(filterID, HEX);
+  Serial.println(F("dejaNode_0.1 - Teensy 3.1 CAN Test."));
+  Serial.printf("node ID: %d (0x%x)",boot_token,boot_token);
+  Serial.println(" ");
 
-Serial.print("boot_token node ID: ");
-Serial.println(boot_token);
-nodeID = boot_token;
   //____________________________________
   //SETUP smartMatrix
   // initialize the digital pin as an output.
@@ -216,22 +224,16 @@ void loop() {
 
   if (!canTimer) {
     while ( CANbus.read(rxmsg) ) {
-	if ((rxmsg.id==0x7FF) && (rxmsg.len==4)) {
+
+      Serial.printf("msg 0x%03x l=%d",rxmsg.id, rxmsg.len);
+      Serial.println("");
+        
+      	if ((rxmsg.id==0x7FF) && (rxmsg.len==4)) {
 		if ((rxmsg.buf[0]==nodeID) && (rxmsg.buf[1]==1) && (rxmsg.buf[2]==0)  && (rxmsg.buf[3]==0x80)) {
 			jumpBootloader();
 		}
 	}
-
-//      Serial.print(".");
-        //hexDump( sizeof(rxmsg), (uint8_t *)&rxmsg );
-//             Serial.print("msg.id: ");
-//              Serial.println(rxmsg.id, HEX);
-//              Serial.print("msg.extended: ");
-//              Serial.println(rxmsg.ext);
-//              Serial.print("msg.len: ");
-//              Serial.println(rxmsg.len);
-//              Serial.print("msg.timeout: ");
-//              Serial.println(rxmsg.timeout);
+#if 0
       for (int i = 0; i < 8; i++) {
           frameBuf[bufCount] = rxmsg.buf[i] - 48;
           bufCount++;
@@ -243,7 +245,9 @@ void loop() {
     //    for (int i = 0; i < 1024; i++) {
     //    frameBuf[i] = random(0, 2);
     //  }
-    canTimer = 2;
+#endif
+      canTimer = 2;
+    }
   }
 
   //_________________________________
