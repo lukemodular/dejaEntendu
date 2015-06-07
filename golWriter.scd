@@ -6,6 +6,20 @@ p = SerialPort(
 );
 
 
+p.putAll("t00020001"); // IDENTIFY all - CAN 0x700+nodeID packet + display on matrix
+p.put(13); // CR
+
+p.putAll("t00020000"); // IDENTIFY all - CAN 0x700+nodeID packet + with no display on matrix
+p.put(13); // CR
+
+p.putAll("t01920001"); // IDENTIFY 0x19 (node 25) - CAN 0x719 packet + display on matrix
+p.put(13); // CR
+
+
+p.putAll("t00020100"); // RESET all
+p.put(13); // CR
+
+
 //SerialPort.devices;
 //p.close;    // close the port
 //SerialPort.closeAll;    // close all ports

@@ -42,7 +42,7 @@ uint8_t nodeID;
 int maskID = 0x07F;      // mask 7-bits for node ID - bit filtering of filterID's 0x000 opens to all messages, 0xFFF only to the messages specified
 int filterID;
 FlexCAN CANbus(1000000);
-static CAN_message_t rxmsg;
+static CAN_message_t rxmsg,txmsg;
 static CAN_filter_t mask;
 static CAN_filter_t filter;
 
@@ -66,7 +66,7 @@ int pxlCount = 0;
 const int defaultBrightness = 100*(255/100);    // full brightness
 //const int defaultBrightness = 15 * (255 / 100); // dim: 15% brightness
 const rgb24 defaultBackgroundColor = {
-  0x40, 0, 0
+  0, 0, 0
 };
 byte colorRand;
 
@@ -85,6 +85,60 @@ AudioConnection          patchCord1(waveform1, envelope1);
 AudioConnection          patchCord2(envelope1, out);
 int noteLength;
 
+// -------------------------------------------------------------
+// -------------------------------------------------------------
+
+uint8_t mac[6];
+uint32_t mac_id;	// use only last 3 bytes of MAC ID - as top three are always 04:E9:E5 for Teensy addr
+
+void read(uint8_t word, uint8_t *mac, uint8_t offset) {
+  FTFL_FCCOB0 = 0x41;             // Selects the READONCE command
+  FTFL_FCCOB1 = word;             // read the given word of read once area
+
+  // launch command and wait until complete
+  FTFL_FSTAT = FTFL_FSTAT_CCIF;
+  while (!(FTFL_FSTAT & FTFL_FSTAT_CCIF));
+
+  *(mac + offset) =   FTFL_FCCOB5;     // collect only the top three bytes,
+  *(mac + offset + 1) = FTFL_FCCOB6;   // in the right orientation (big endian).
+  *(mac + offset + 2) = FTFL_FCCOB7;   // Skip FTFL_FCCOB4 as it's always 0.
+}
+
+void read_mac() {
+  read(0xe, mac, 0);
+  read(0xf, mac, 3);
+  // our shorter MAC ID - only last 3 bytes
+  mac_id = ((uint32_t)mac[3]<<16) + ((uint32_t)mac[4]<<8) + (uint32_t)mac[5];
+}
+
+void identify(uint8_t mode) {
+
+  // send bootup message with MAC ID
+  read_mac();
+  txmsg.len = 7;
+  txmsg.id = 0x700+nodeID;
+  txmsg.buf[0] = 1;  // application sends 1, bootloader sends 0
+  txmsg.buf[1]=mac[0];
+  txmsg.buf[2]=mac[1];
+  txmsg.buf[3]=mac[2];
+  txmsg.buf[4]=mac[3];
+  txmsg.buf[5]=mac[4];
+  txmsg.buf[6]=mac[5];
+  CANbus.write(txmsg);
+
+  if (mode) {
+    matrix.setFont(font5x7);
+    matrix.fillScreen({0,0,0});
+    matrix.setBrightness(15 * (255 / 100)); // 15% brightness
+    matrix.swapBuffers(true);
+    sprintf(nodeBuffer, "%d", nodeID);
+    matrix.drawString(0,0,{255,255,255},nodeBuffer);
+    matrix.drawString(0,14,{200,0,200},"ID");
+    matrix.swapBuffers(true);
+    delay(500); 
+  }
+ 
+} 
 
 void jumpBootloader(void)
 {
@@ -108,6 +162,8 @@ void jumpBootloader(void)
 
 
 // -------------------------------------------------------------
+// -------------------------------------------------------------
+
 void setup() {
 
   Serial.begin(115200);
@@ -158,7 +214,8 @@ void setup() {
   matrix.fillScreen({0,0,0});
   matrix.swapBuffers(true);
   sprintf(nodeBuffer, "%d", nodeID);
-  matrix.drawString(0,0,whiteColor,nodeBuffer);
+  matrix.drawString(0,0,{255,255,255},nodeBuffer);
+  matrix.drawString(0,14,{200,0,200},"init");
   matrix.swapBuffers(true);
   delay(1000);
   
@@ -224,8 +281,10 @@ void loop() {
 
   if (!canTimer) {
     while ( CANbus.read(rxmsg) ) {
+      int rx_nodeID = rxmsg.id & 0x07F;
+      int rx_cobID = rxmsg.id & 0xF80;  // mask off nodeID
 
-      Serial.printf("msg 0x%03x l=%d",rxmsg.id, rxmsg.len);
+      Serial.printf("msg 0x%03x l=%d  nodeID=%d cobID=0x%03x",rxmsg.id, rxmsg.len, rx_nodeID, rx_cobID);
       Serial.println("");
         
       	if ((rxmsg.id==0x7FF) && (rxmsg.len==4)) {
@@ -233,6 +292,32 @@ void loop() {
 			jumpBootloader();
 		}
 	}
+
+        if ( (rx_cobID==0) && (rxmsg.len==2) && (rxmsg.buf[0]==0) ) {
+          if (rx_nodeID) {
+            Serial.printf("[IDENTIFY node %d]",rx_nodeID);
+            Serial.println("");
+          } else {
+            Serial.println("[IDENTIFY all]");
+          }
+          identify(rxmsg.buf[1]); 
+        }
+
+        if ( (rx_cobID==0) && (rxmsg.len==2) && (rxmsg.buf[0]==1) ) {
+          Serial.println("[RESET]");
+          if (rxmsg.buf[1]) {
+            delay(500+(nodeID*10)); // stagger the resets to help with power
+          } else {
+            delay(500);
+          }
+          __disable_irq();
+          // Any invalid write to the WDOG registers will trigger an immediate reboot
+          WDOG_REFRESH = 0;
+          while(1);  /* wait until reset */
+        }
+            
+ //       switch (rx_cobID) 
+
 #if 0
       for (int i = 0; i < 8; i++) {
           frameBuf[bufCount] = rxmsg.buf[i] - 48;
