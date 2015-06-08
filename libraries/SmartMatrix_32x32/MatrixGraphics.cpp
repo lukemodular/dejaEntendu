@@ -681,11 +681,11 @@ void SmartMatrix::drawChar(int16_t x, int16_t y, const rgb24& charColor, char ch
 }
 
 void SmartMatrix::drawString(int16_t x, int16_t y, const rgb24& charColor, const char text[]) {
-    int xcnt, ycnt, i = 0, offset = 0;
+    int xcnt, ycnt, i = 0, offset = 0, l = strlen(text);
     char character;
 
     // limit text to 10 chars, why?
-    for (i = 0; i < 10; i++) {
+    for (i = 0; i < l; i++) {
         character = text[offset++];
         if (character == '\0')
             return;
@@ -703,11 +703,11 @@ void SmartMatrix::drawString(int16_t x, int16_t y, const rgb24& charColor, const
 
 // draw string while clearing background
 void SmartMatrix::drawString(int16_t x, int16_t y, const rgb24& charColor, const rgb24& backColor, const char text[]) {
-    int xcnt, ycnt, i = 0, offset = 0;
+    int xcnt, ycnt, i = 0, offset = 0, l = strlen(text);
     char character;
 
     // limit text to 10 chars, why?
-    for (i = 0; i < 10; i++) {
+    for (i = 0; i < l; i++) {
         character = text[offset++];
         if (character == '\0')
             return;
