@@ -1,3 +1,8 @@
+/////////////
+//messages
+
+"t200803020700FFFF0102"
+"t"++2.asHexString(3)++8++2.asHexString(2)++255.asHexString(2)++255.asHexString(2)++1.asHexString(2)++2.asHexString(2)
 
 ///////////////////////////
 //game of life /redFrik
@@ -41,8 +46,7 @@ sqrt(370432)
 
 
 (
-var w, u, width= 1595, height= 563, rows= 48, cols= 136, cellWidth, cellHeight, textItem;
-//display factor 2.9319852941176, letters: rows= 32, cols= 181, nice and small pxl: rows= 256, cols= 1447
+var w, u, width= 544, height= 192, cols= 136,rows= 48, cellWidth, cellHeight, textItem;
 //real pixl 192 x 544, type 4x2 = 48 x 272, type 4x4 = 48 x 136, type 4x8 = 24 x 136
 var envir, copy, neighbours, preset, rule, wrap, fontRect, snake, genContext;
 var textArray, font, corpus;
@@ -134,11 +138,8 @@ cellHeight= height/rows;
 wrap= false;                     //if borderless envir
 
 
-//font = Font("Pixel 4x4", 12);
-font = Font("N.E. 4x4 Techneriment", 18);
-//font = Font("DreamCodex Micro", 40);
-//font = Font("DS-Digital", 10);
-//font = Font("dotty", 24);
+font = Font("Arial", 4);
+//Font.availableFonts;
 
 snake = ContextSnake(a, "a", 3);	// try longer context again
 genContext = snake.asStream.all.join;
