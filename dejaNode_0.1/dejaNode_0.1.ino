@@ -22,6 +22,10 @@ SmartMatrix matrix;
 
 byte led = 13;
 
+byte fw_version = 1;
+//const char fw_date = "09-jun-2015";
+
+
 const char* phrase[] = { 
   "deja entendu", 
   "vraiment pas pire", 
@@ -73,8 +77,8 @@ int pxlCount = 0;
 //________________________________________________________________
 //variables smartMatrix
 
-const int defaultBrightness = 100*(255/100);    // full brightness
-//const int defaultBrightness = 15 * (255 / 100); // dim: 15% brightness
+//const int defaultBrightness = 100*(255/100);    // full brightness
+const int defaultBrightness = 15 * (255 / 100); // dim: 15% brightness
 const rgb24 defaultBackgroundColor = { 0, 0, 0 };
 byte colorRand;
 
@@ -123,7 +127,7 @@ void identify(uint8_t mode) {
 
   // send bootup message with MAC ID
   read_mac();
-  txmsg.len = 7;
+  txmsg.len = 8;
   txmsg.id = 0x700+nodeID;
   txmsg.buf[0] = 1;  // application sends 1, bootloader sends 0
   txmsg.buf[1]=mac[0];
@@ -132,6 +136,7 @@ void identify(uint8_t mode) {
   txmsg.buf[4]=mac[3];
   txmsg.buf[5]=mac[4];
   txmsg.buf[6]=mac[5];
+  txmsg.buf[7]=fw_version;
   CANbus.write(txmsg);
 
   if (mode) {
@@ -142,11 +147,14 @@ void identify(uint8_t mode) {
     sprintf(nodeBuffer, "%d", nodeID);
     matrix.drawString(0,0,{255,255,255},nodeBuffer);
     matrix.drawString(0,14,{200,0,200},"ID");
+    sprintf(nodeBuffer, "v%d", fw_version);
+    matrix.drawString(0,24,{120,120,120},nodeBuffer);
     matrix.swapBuffers(true);
     delay(500); 
   }
  
 } 
+
 
 void jumpBootloader(void)
 {
@@ -223,6 +231,8 @@ void setup() {
   sprintf(nodeBuffer, "%d", nodeID);
   matrix.drawString(0,0,{255,255,255},nodeBuffer);
   matrix.drawString(0,14,{200,0,200},"init");
+  sprintf(nodeBuffer, "v%d", fw_version);
+  matrix.drawString(0,24,{120,120,120},nodeBuffer);
   matrix.swapBuffers(true);
   delay(1000);
   
@@ -323,6 +333,17 @@ void loop() {
           while(1);  /* wait until reset */
         }
 
+        if ( (rx_cobID==0x200) && (rxmsg.len==2) && (rxmsg.buf[0]==1) ) {
+          Serial.println("[BRIGHTNESS]");
+          matrix.setBrightness(rxmsg.buf[1]); 
+        } 
+
+        if ( (rx_cobID==0x200) && (rxmsg.len==2) && (rxmsg.buf[0]==2) ) {
+          Serial.println("[VOLUME]");
+          // TODO !!! how?
+
+        } 
+
         if ( (rx_cobID==0x200) && (rxmsg.len==4) && (rxmsg.buf[0]==0) ) {
           Serial.println("[LED: clear display]");
           matrix.fillScreen({rxmsg.buf[1],rxmsg.buf[2],rxmsg.buf[3]});
@@ -330,8 +351,10 @@ void loop() {
         } 
 
         if ( (rx_cobID==0x200) && (rxmsg.len==8) && (rxmsg.buf[0]==3) ) {
+          int local_coord = rxmsg.buf[6] & 0x10;
           Serial.println("[LED: phrase]");
-
+          Serial.printf("x=%d y=%d\n",(int((nodeID-1)%17)*32),(int((nodeID-1)/17)*32));
+ 
           if (rxmsg.buf[7]<=phrase_count) {
              // display node ID
             if (rxmsg.buf[6]&0x01) {
@@ -342,17 +365,24 @@ void loop() {
             matrix.fillScreen({0,0,0});
             matrix.setBrightness(15 * (255 / 100)); // 15% brightness
             matrix.swapBuffers(true);
-            matrix.drawString(rxmsg.buf[1],rxmsg.buf[2],
+            if (local_coord) {
+              matrix.drawString( (int)rxmsg.buf[1],(int)rxmsg.buf[2],
               {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
               {0,0,0},  // BG color
               phrase[rxmsg.buf[7]]);
+            } else {
+              matrix.drawString(
+              (int)rxmsg.buf[1]-(int((nodeID-1)%17)*32),
+              (int)rxmsg.buf[2]-(int((nodeID-1)/17)*32),
+              {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
+              {0,0,0},  // BG color
+              phrase[rxmsg.buf[7]]);
+            }
             matrix.swapBuffers(true);
           }
         }
 
             
- //       switch (rx_cobID) 
-
 #if 0
       for (int i = 0; i < 8; i++) {
           frameBuf[bufCount] = rxmsg.buf[i] - 48;

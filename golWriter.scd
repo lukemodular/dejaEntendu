@@ -1,7 +1,7 @@
 (
 p = SerialPort(
-    "/dev/ttyACM0",
-    baudrate: 230400,    //115200, 230400
+	"/dev/ttyACM0",
+	baudrate: 230400,    //115200, 230400
 	crtscts: false);
 );
 
@@ -31,21 +31,71 @@ p.put(13); // CR
 
 // [LED phrase] 0x200+nodeID cmd=3
 // len 8  bytes 0[cmd] 1[X] 2[Y] 3[R] 4[G] 5[B] 6[font0..1] 7 [phrase index]
+// byte 6 - add 0x10 to enable local coordinates for X & Y instead of default global coordinates when this bit is 0
 
+// GLOBAL coordinates used
+
+// X= 0xC0 (192) Y=0x24 (36)
 fork{
-p.putAll("t2008030410FF00FF0000"); // LED phrase (all) 0 0xFF,0x00,0xFF with font 0x00
+p.putAll("t200803C024FF00FF0000"); // LED phrase (all) 0 0xFF,0x00,0xFF with font 0x00
+p.put(13); // CR
+}.play
+
+// X= 0xC2 (194) Y=0x24 (36)
+fork{
+p.putAll("t200803C22400FFFF0100"); // LED phrase #2 (all) 0x00,0xFF,0xFF with font 0x01 = global coordinates (0) + font (1)
+p.put(13); // CR
+}.play
+
+var c = "t" ++ 0x200.asHexString(3) ++ 8.asHexString(1) ++ 3.asHexString(2)
+++ 194.asHexString(2) ++ 40.asHexString(2) // X Y
+++ 0xDD.asHexString(2) ++ 0xEE.asHexString(2) ++ 0xFF.asHexString(2) // COLOR
+++ 1.asHexString(2) ++ 1.asHexString(2) ++ "\r"; // font # (+local/global bit6), phrase #
+postln(c);
+fork{ p.putAll(c); }.play
+
+
+// LOCAL coordinates used
+fork{
+p.putAll("t2008030410FF00FF1000"); // LED phrase (all) 0 0xFF,0x00,0xFF with font 0x10 = local coordinates(1) + font (0)
 p.put(13); // CR
 }.play
 
 fork{
-p.putAll("t200803020700FFFF0102",); // LED phrase #2 (all) 0x00,0xFF,0xFF with font 0x01
+p.putAll("t200803020700FFFF1102",); // LED phrase #2 (all) 0x00,0xFF,0xFF with font 0x01
 p.put(13); // CR
 }.play
 
 fork{
-p.putAll("t200803020200FFFF0102"); // LED phrase #2 (all) 0x00,0xFF,0xFF with font 0x01
+p.putAll("t200803020200FFFF1102"); // LED phrase #2 (all) 0x00,0xFF,0xFF with font 0x11 = local coordinates(1) + font (1)
 p.put(13); // CR
 }.play
+
+
+
+// [LED brightness] 0x200+nodeID cmd=1
+// len 2  bytes 0[cmd] 1[brightness
+
+fork{
+p.putAll("t20020100"); // LED brightness (all) 0x00
+p.put(13); // CR
+}.play
+
+fork{
+p.putAll("t20020110"); // LED brightness (all) 0x10
+p.put(13); // CR
+}.play
+
+fork{
+p.putAll("t20020130"); // LED brightness (all) 0x30
+p.put(13); // CR
+}.play
+
+fork{
+p.putAll("t200201FF"); // LED brightness (all) 0xFF
+p.put(13); // CR
+}.play
+
 
 // [LED clear display] 0x200+nodeID cmd=0
 // len 4  bytes 0[cmd] 1[R] 2[G] 3[B]
@@ -55,6 +105,20 @@ p.putAll("t200400402080"); // LED clear display (all) with 0x40,0x20,0x80 color
 p.put(13); // CR
 }.play
 
+fork{
+p.putAll("t200400000000"); // LED clear display (all) with 0x00,0x00,0x00 color
+p.put(13); // CR
+}.play
+
+a = Integer(27/17)*32;
+postln(a);
+
+postf("t%\n", 0x200.asHexString(3),8.asHexString(1));
+
+id = 0x200;
+postf("t%%%", id.asHexString(3), "8", "405060");
+
+postf("t% x\n", 0x080.asDigits(16,3).convertDigits.leadingZeroes);
 
 p.close;    // close the port
 SerialPort.closeAll;    // close all ports
