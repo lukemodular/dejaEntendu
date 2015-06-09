@@ -22,7 +22,7 @@ SmartMatrix matrix;
 
 byte led = 13;
 
-byte fw_version = 1;
+byte fw_version = 2;
 //const char fw_date = "09-jun-2015";
 
 
@@ -88,13 +88,35 @@ const rgb24 whiteColor = {0xff, 0xff, 0xff};
 //________________________________________________________________
 //variables Audio
 
-AudioSynthWaveform       waveform1;
-AudioSynthWaveformSineModulated fm1;
-AudioEffectEnvelope      envelope1;
-AudioOutputAnalog        out;
-AudioConnection          patchCord1(waveform1, envelope1);
-//AudioConnection          patchCord2(fm1, envelope1);
-AudioConnection          patchCord2(envelope1, out);
+#if 0
+// GUItool: begin automatically generated code
+AudioSynthWaveform            waveform1;           //xy=100,200
+AudioSynthWaveformSineModulated            fm1;           //xy=200,200
+AudioEffectEnvelope            envelope1;           //xy=300,200
+AudioOutputAnalog            out;           //xy=400,200
+AudioConnection            patchCord1(waveform1, envelope1);           //xy=100,300
+//AudioConnection            patchCord2(fm1, envelope1);           //xy=200,300
+AudioConnection            patchCord2(envelope1, out);           //xy=300,300
+// GUItool: end automatically generated code
+
+#else
+// GUItool: begin automatically generated code
+AudioSynthWaveformSineModulated sine_fm1;       //xy=145,290
+AudioSynthWaveform       waveform1;      //xy=146,174
+AudioEffectEnvelope      envelope1;      //xy=308,174
+AudioEffectFade          fade1;          //xy=466,237
+AudioEffectFade          fade2;          //xy=466,292
+AudioMixer4              mixer1;         //xy=654,299
+AudioOutputAnalog        out;           //xy=853,299
+AudioConnection          patchCord1(sine_fm1, fade2);
+AudioConnection          patchCord2(waveform1, envelope1);
+AudioConnection          patchCord3(envelope1, fade1);
+AudioConnection          patchCord4(fade1, 0, mixer1, 0);
+AudioConnection          patchCord5(fade2, 0, mixer1, 1);
+AudioConnection          patchCord6(mixer1, out);
+// GUItool: end automatically generated code
+#endif
+
 int noteLength;
 
 // -------------------------------------------------------------
@@ -257,6 +279,8 @@ void setup() {
   envelope1.release(5);
   //larger attack and release time leads to clicks (after ~100ms)
 
+  mixer1.gain(0,1.0);
+  
   // Initialize processor and memory measurements
   AudioProcessorUsageMaxReset();
   AudioMemoryUsageMaxReset();
@@ -338,12 +362,39 @@ void loop() {
           matrix.setBrightness(rxmsg.buf[1]); 
         } 
 
-        if ( (rx_cobID==0x200) && (rxmsg.len==2) && (rxmsg.buf[0]==2) ) {
-          Serial.println("[VOLUME]");
-          // TODO !!! how?
-
+        if ( (rx_cobID==0x200) && (rxmsg.len==4) && (rxmsg.buf[0]==2) ) {
+          Serial.print("[VOLUME ");
+          int cmd = rxmsg.buf[1];
+          uint32_t val = ((uint32_t)rxmsg.buf[2]<<8) | (uint32_t)rxmsg.buf[3];
+          switch (cmd) {
+            case 0: // set volume ( val/1000 ) gain
+            Serial.print("set] gain ");
+            Serial.print((float)(val)/1000.0);
+            Serial.println();
+            mixer1.gain(0,(float)(val)/1000.0);  // 1000 = no gain 1.0             
+            break;
+            
+            case 1: // fadeIn (mS)
+            Serial.print("fadeIn] mS: ");
+            Serial.print(val);
+            Serial.println();
+            fade1.fadeIn(val);
+            break;
+            
+            case 2: // fadeOut (mS)
+            Serial.print("fadeOut] mS: ");
+            Serial.print(val);
+            Serial.println();
+            fade1.fadeOut(val);            
+            break;
+            
+            default:
+            Serial.println("unrecognied command]");
+            break;
+          }         
+  
         } 
-
+  
         if ( (rx_cobID==0x200) && (rxmsg.len==4) && (rxmsg.buf[0]==0) ) {
           Serial.println("[LED: clear display]");
           matrix.fillScreen({rxmsg.buf[1],rxmsg.buf[2],rxmsg.buf[3]});
@@ -352,6 +403,7 @@ void loop() {
 
         if ( (rx_cobID==0x200) && (rxmsg.len==8) && (rxmsg.buf[0]==3) ) {
           int local_coord = rxmsg.buf[6] & 0x10;
+          int transparent = rxmsg.buf[6] & 0x20;
           Serial.println("[LED: phrase]");
           Serial.printf("x=%d y=%d\n",(int((nodeID-1)%17)*32),(int((nodeID-1)/17)*32));
  
@@ -366,17 +418,31 @@ void loop() {
             matrix.setBrightness(15 * (255 / 100)); // 15% brightness
             matrix.swapBuffers(true);
             if (local_coord) {
-              matrix.drawString( (int)rxmsg.buf[1],(int)rxmsg.buf[2],
-              {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
-              {0,0,0},  // BG color
-              phrase[rxmsg.buf[7]]);
+              if (transparent) {
+                matrix.drawString( (int)rxmsg.buf[1],(int)rxmsg.buf[2],
+                {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
+                phrase[rxmsg.buf[7]]);
+              } else {
+                matrix.drawString( (int)rxmsg.buf[1],(int)rxmsg.buf[2],
+                {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
+                {0,0,0},  // BG color
+                phrase[rxmsg.buf[7]]);
+              }
             } else {
-              matrix.drawString(
-              (int)rxmsg.buf[1]-(int((nodeID-1)%17)*32),
-              (int)rxmsg.buf[2]-(int((nodeID-1)/17)*32),
-              {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
-              {0,0,0},  // BG color
-              phrase[rxmsg.buf[7]]);
+              if (transparent) {
+                matrix.drawString(
+                (int)rxmsg.buf[1]-(int((nodeID-1)%17)*32),
+                (int)rxmsg.buf[2]-(int((nodeID-1)/17)*32),
+                {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
+                phrase[rxmsg.buf[7]]);
+              } else {
+                matrix.drawString(
+                (int)rxmsg.buf[1]-(int((nodeID-1)%17)*32),
+                (int)rxmsg.buf[2]-(int((nodeID-1)/17)*32),
+                {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
+                {0,0,0},  // BG color
+                phrase[rxmsg.buf[7]]);
+              }
             }
             matrix.swapBuffers(true);
           }
