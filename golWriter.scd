@@ -1,6 +1,6 @@
 (
 p = SerialPort(
-	"/dev/ttyACM0",
+	"/dev/ttyACM1",
 	baudrate: 230400,    //115200, 230400
 	crtscts: false);
 );
@@ -76,14 +76,14 @@ fork{ p.putAll("t200201"++ 20.asHexString(2)++"\r");}.play // LED brightness (al
 
 // ------------------------------------------
 // [LED draw character] 0x200+nodeID cmd=2
-// len 2  bytes 0[cmd] [X] 2[Y] 3[R] 4[G] 5[B] 6[font0..1] 7[char]
+// len 2  bytes 0[cmd] [X] 2[Y] 3[R] 4[G] 5[B] 6[font0-3] 7[char]
 // ------------------------------------------
 // GLOBAL coordinates used
 fork{ p.putAll("t200823C024FF00FF00"++"a".ascii[0].asHexString(2)++"\r");}.play // LED char (all) 0 0xFF,0x00,0xFF with font 0x00 - global coordinates X= 0xC0 (192) Y=0x24 (36) + font (0)
 fork{ p.putAll("t200802C22400FFFF01"++"b".ascii[0].asHexString(2)++"\r");}.play // LED char (all) 0x00,0xFF,0xFF with font 0x01 = global coordinates X= 0xC2 (194) Y=0x24 (36) + font (1)
 
 // LOCAL coordinates used
-fork{ p.putAll("t20080208184F40FF11"++"D".ascii[0].asHexString(2)++"\r");}.play // LED phrase #0 (all) 0 0xFF,0x00,0xFF with font 0x10 = local coordinates(1) + font (0)
+fork{ p.putAll("t20080208184F40FF10"++"D".ascii[0].asHexString(2)++"\r");}.play // LED phrase #0 (all) 0 0xFF,0x00,0xFF with font 0x10 = local coordinates(1) + font (0)
 fork{ p.putAll("t20080210184F408F31"++"E".ascii[0].asHexString(2)++"\r");}.play // LED phrase #0 (all) 0 0xFF,0x00,0xFF with font 0x10 = local coordinates(1) + font (0) - transparent
 fork{ p.putAll("t20080218184F404F11"++"J".ascii[0].asHexString(2)++"\r");}.play // LED phrase #0 (all) 0 0xFF,0x00,0xFF with font 0x10 = local coordinates(1) + font (0)
 
@@ -92,7 +92,7 @@ fork{ p.putAll("t20080218184F404F11"++"J".ascii[0].asHexString(2)++"\r");}.play 
 // ------------------------------------------
 // [LED phrase] 0x200+nodeID cmd=3
 // ------------------------------------------
-// len 8  bytes 0[cmd] 1[X] 2[Y] 3[R] 4[G] 5[B] 6[font0..1] 7 [phrase index]
+// len 8  bytes 0[cmd] 1[X] 2[Y] 3[R] 4[G] 5[B] 6[font0-3] 7 [phrase index]
 // byte 6 - add 0x10 (bit4) to enable local coordinates for X & Y instead of default global coordinates when this bit is 0
 // byte 6 - add 0x20 (bit5) to set TRANSPARENCY flag - not yet working in SmartMatrix lib
 
@@ -114,14 +114,23 @@ fork{ p.putAll("t200803020200FFFF3102\r");}.play // LED phrase #2 (all) 0x00,0xF
 // ------------------------------------------
 // [LED scrollText] 0x200+nodeID cmd=4
 // ------------------------------------------
-// len 8  bytes 0[cmd] 1[startY] 2[R] 3[G] 4[B] 5[speed] 6[font0..1 | rotation] 7 [phrase index]
-// byte 6 - add 0x10 (bit4) to enable local coordinates for X & Y instead of default global coordinates when this bit is 0
-// byte 6 - add 0x20 (bit5) to set TRANSPARENCY flag - not yet working in SmartMatrix lib
+// len 8  bytes 0[cmd] 1[startY] 2[R] 3[G] 4[B] 5[speed] 6[font0-3] 7[phrase index]
 
 // LOCAL coordinates used
-fork{ p.putAll("t200804FF00FF50000000\r");}.play // LED scroll phrase #0 (all) 0 0xFF,0x00,0xFF with font 0x10 = local coordinates(1) + font (0)
 
+fork{ p.putAll("t200804"++ // LED scroll (all)
+	10.asHexString(2)++ // start Y
+	"FF00FF"++ // RGB
+	20.asHexString(2)++ // speed
+	1.asHexString(2)++ // font
+	0.asHexString(2)++"\r");}.play // phrase
 
+fork{ p.putAll("t200804"++
+	24.asHexString(2)++ // start Y
+	"FFFF00"++ // RGB
+	30.asHexString(2)++ // speed
+	2.asHexString(2)++ // font
+	1.asHexString(2)++"\r");}.play // phrase
 
 
 // ------------------------------------------

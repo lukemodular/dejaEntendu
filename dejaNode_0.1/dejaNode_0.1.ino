@@ -22,7 +22,7 @@ SmartMatrix matrix;
 
 byte led = 13;
 
-byte fw_version = 2;
+byte fw_version = 3;
 //const char fw_date = "10-jun-2015";
 
 
@@ -419,10 +419,19 @@ void loop() {
 //        Serial.printf("x=%d y=%d\n",(int((nodeID-1)%17)*32),(int((nodeID-1)/17)*32));
  
           if (rxmsg.buf[7]<=phrase_count) {
-            if (rxmsg.buf[6]&0x01) {
-              matrix.setFont(font5x7);
-            } else {
-              matrix.setFont(font3x5);
+            switch (rxmsg.buf[6]&0x03) {
+               case 0:
+                 matrix.setFont(font4x4);
+                 break;
+               case 1:
+                 matrix.setFont(font4x8_ansi);
+                 break;
+               case 2:
+                 matrix.setFont(font3x5);
+                 break;
+               default:
+                 matrix.setFont(font5x7);
+                 break;
             }
 //            matrix.fillScreen({0,0,0});  // don't erase screen!
 //           matrix.setBrightness(15 * (255 / 100)); // 15% brightness
@@ -465,12 +474,21 @@ void loop() {
           int transparent = rxmsg.buf[6] & 0x20;
           Serial.println("[LED: char]");
  
-          if (rxmsg.buf[6]&0x01) {
-            matrix.setFont(font5x7);
-          } else {
-            matrix.setFont(font3x5);
+         switch (rxmsg.buf[6]&0x03) {
+           case 0:
+             matrix.setFont(font4x4);
+             break;
+           case 1:
+             matrix.setFont(font4x8_ansi);
+             break;
+           case 2:
+             matrix.setFont(font3x5);
+             break;
+           default:
+             matrix.setFont(font5x7);
+             break;
           }
-//            matrix.fillScreen({0,0,0});
+ //       matrix.fillScreen({0,0,0});
           matrix.swapBuffers(true);
           if (local_coord) {
             if (transparent) {
@@ -510,53 +528,31 @@ void loop() {
           Serial.println("[LED: scrollText]");
  
           if (rxmsg.buf[7]<=phrase_count) {
-          matrix.setScrollMode(wrapForward);
-          matrix.setScrollSpeed((unsigned char)rxmsg.buf[5]);
-          matrix.setScrollOffsetFromTop((int)rxmsg.buf[1]);
-          matrix.setScrollColor({rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]});
-          
-            if (rxmsg.buf[6]&0x01) {
-              matrix.setScrollFont(font5x7);
-            } else {
-              matrix.setScrollFont(font3x5);
+            switch (rxmsg.buf[6]&0x03) {
+             case 0:
+               matrix.setScrollFont(font4x4);
+               break;
+             case 1:
+               matrix.setScrollFont(font4x8_ansi);
+               break;
+             case 2:
+               matrix.setScrollFont(font3x5);
+               break;
+             default:
+               matrix.setScrollFont(font5x7);
+               break;
             }
-          matrix.scrollText(phrase[rxmsg.buf[7]],-1); // number scrolls = 1 ?!       
- 
- #if 0
-         if (local_coord) {
-              if (transparent) {
-                matrix.drawString( (int)rxmsg.buf[1],(int)rxmsg.buf[2],
-                {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
-                phrase[rxmsg.buf[7]]);
-              } else {
-                matrix.drawString( (int)rxmsg.buf[1],(int)rxmsg.buf[2],
-                {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
-                {0,0,0},  // BG color
-                phrase[rxmsg.buf[7]]);
-              }
-            } else {
-              if (transparent) {
-                matrix.drawString(
-                (int)rxmsg.buf[1]-(int((nodeID-1)%17)*32),
-                (int)rxmsg.buf[2]-(int((nodeID-1)/17)*32),
-                {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
-                phrase[rxmsg.buf[7]]);
-              } else {
-                matrix.drawString(
-                (int)rxmsg.buf[1]-(int((nodeID-1)%17)*32),
-                (int)rxmsg.buf[2]-(int((nodeID-1)/17)*32),
-                {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
-                {0,0,0},  // BG color
-                phrase[rxmsg.buf[7]]);
-              }
-            }
-#endif
-          }
-          continue;
+            matrix.setScrollColor({rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]});
+            matrix.setScrollMode(wrapForward);
+            matrix.setScrollSpeed((unsigned char)rxmsg.buf[5]);
+            matrix.setScrollOffsetFromTop((int)rxmsg.buf[1]);
+  
+            matrix.scrollText(phrase[rxmsg.buf[7]],1); // number scrolls = 1  
+//        while (matrix.getScrollStatus());
+         }
+         continue;
         }
 
-    
-        
         
         
 #if 0
