@@ -680,6 +680,19 @@ void SmartMatrix::drawChar(int16_t x, int16_t y, const rgb24& charColor, char ch
     }
 }
 
+void SmartMatrix::drawChar(int16_t x, int16_t y, const rgb24& charColor, const rgb24& backColor, char character) {
+    int xcnt, ycnt;
+
+    for (ycnt = 0; ycnt < font->Height; ycnt++) {
+        for (xcnt = 0; xcnt < font->Width; xcnt++) {
+            if (getBitmapFontPixelAtXY(character, xcnt, ycnt, font)) {
+                drawPixel(x + xcnt, y + ycnt, charColor);
+	    } else {
+		drawPixel(x + xcnt, y + ycnt, backColor);
+            }
+        }
+    }
+}
 void SmartMatrix::drawString(int16_t x, int16_t y, const rgb24& charColor, const char text[]) {
     int xcnt, ycnt, i = 0, offset = 0, l = strlen(text);
     char character;

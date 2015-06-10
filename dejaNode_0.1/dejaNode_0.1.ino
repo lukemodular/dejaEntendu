@@ -23,7 +23,7 @@ SmartMatrix matrix;
 byte led = 13;
 
 byte fw_version = 2;
-//const char fw_date = "09-jun-2015";
+//const char fw_date = "10-jun-2015";
 
 
 const char* phrase[] = { 
@@ -88,18 +88,6 @@ const rgb24 whiteColor = {0xff, 0xff, 0xff};
 //________________________________________________________________
 //variables Audio
 
-#if 0
-// GUItool: begin automatically generated code
-AudioSynthWaveform            waveform1;           //xy=100,200
-AudioSynthWaveformSineModulated            fm1;           //xy=200,200
-AudioEffectEnvelope            envelope1;           //xy=300,200
-AudioOutputAnalog            out;           //xy=400,200
-AudioConnection            patchCord1(waveform1, envelope1);           //xy=100,300
-//AudioConnection            patchCord2(fm1, envelope1);           //xy=200,300
-AudioConnection            patchCord2(envelope1, out);           //xy=300,300
-// GUItool: end automatically generated code
-
-#else
 // GUItool: begin automatically generated code
 AudioSynthWaveformSineModulated sine_fm1;       //xy=145,290
 AudioSynthWaveform       waveform1;      //xy=146,174
@@ -115,7 +103,6 @@ AudioConnection          patchCord4(fade1, 0, mixer1, 0);
 AudioConnection          patchCord5(fade2, 0, mixer1, 1);
 AudioConnection          patchCord6(mixer1, out);
 // GUItool: end automatically generated code
-#endif
 
 int noteLength;
 
@@ -334,6 +321,8 @@ void loop() {
 		}
 	}
 
+// ------------ 000h(+nodeID) IDENTIFY--------------------
+
         if ( (rx_cobID==0) && (rxmsg.len==2) && (rxmsg.buf[0]==0) ) {
           if (rx_nodeID) {
             Serial.printf("[IDENTIFY node %d]",rx_nodeID);
@@ -341,7 +330,8 @@ void loop() {
           } else {
             Serial.println("[IDENTIFY all]");
           }
-          identify(rxmsg.buf[1]); 
+          identify(rxmsg.buf[1]);
+          continue;
         }
 
         if ( (rx_cobID==0) && (rxmsg.len==2) && (rxmsg.buf[0]==1) ) {
@@ -357,15 +347,12 @@ void loop() {
           while(1);  /* wait until reset */
         }
 
-        if ( (rx_cobID==0x200) && (rxmsg.len==2) && (rxmsg.buf[0]==1) ) {
-          Serial.println("[BRIGHTNESS]");
-          matrix.setBrightness(rxmsg.buf[1]); 
-        } 
-
-        if ( (rx_cobID==0x200) && (rxmsg.len==4) && (rxmsg.buf[0]==2) ) {
+// ------------ 100h(+nodeID) SOUND ---------------------
+ 
+        if ( (rx_cobID==0x100) && (rxmsg.len==3) ) {
           Serial.print("[VOLUME ");
-          int cmd = rxmsg.buf[1];
-          uint32_t val = ((uint32_t)rxmsg.buf[2]<<8) | (uint32_t)rxmsg.buf[3];
+          int cmd = rxmsg.buf[0];
+          uint32_t val = ((uint32_t)rxmsg.buf[1]<<8) | (uint32_t)rxmsg.buf[2];
           switch (cmd) {
             case 0: // set volume ( val/1000 ) gain
             Serial.print("set] gain ");
@@ -389,33 +376,56 @@ void loop() {
             break;
             
             default:
-            Serial.println("unrecognied command]");
+            Serial.println("unrecognized command]");
             break;
           }         
   
+        continue;
         } 
-  
+ 
+        if ( (rx_cobID==0x100) && (rxmsg.buf[0]==3) && (rxmsg.len==6) ) {
+          Serial.println("[SOUND noteON]");
+          waveform1.frequency(rxmsg.buf[1]);
+          //waveform1.amplitude(0.3*random(1, 5));
+          envelope1.noteOn();
+          //noteLength = random(500, 4000);
+          noteLength = 100;
+          noteOnTimer = 2000;        //note happend???
+          noteOffTimer = noteLength;
+          continue;
+        }
+        
+ 
+// ------------ 200h(+nodeID) LED ---------------------
+ 
+ 
+        if ( (rx_cobID==0x200) && (rxmsg.len==2) && (rxmsg.buf[0]==1) ) {
+          Serial.println("[BRIGHTNESS]");
+          matrix.setBrightness(rxmsg.buf[1]); 
+          continue;
+        } 
+        
         if ( (rx_cobID==0x200) && (rxmsg.len==4) && (rxmsg.buf[0]==0) ) {
           Serial.println("[LED: clear display]");
           matrix.fillScreen({rxmsg.buf[1],rxmsg.buf[2],rxmsg.buf[3]});
           matrix.swapBuffers(true);
+          continue;
         } 
 
         if ( (rx_cobID==0x200) && (rxmsg.len==8) && (rxmsg.buf[0]==3) ) {
           int local_coord = rxmsg.buf[6] & 0x10;
           int transparent = rxmsg.buf[6] & 0x20;
           Serial.println("[LED: phrase]");
-          Serial.printf("x=%d y=%d\n",(int((nodeID-1)%17)*32),(int((nodeID-1)/17)*32));
+//        Serial.printf("x=%d y=%d\n",(int((nodeID-1)%17)*32),(int((nodeID-1)/17)*32));
  
           if (rxmsg.buf[7]<=phrase_count) {
-             // display node ID
             if (rxmsg.buf[6]&0x01) {
               matrix.setFont(font5x7);
             } else {
               matrix.setFont(font3x5);
             }
-            matrix.fillScreen({0,0,0});
-            matrix.setBrightness(15 * (255 / 100)); // 15% brightness
+//            matrix.fillScreen({0,0,0});  // don't erase screen!
+//           matrix.setBrightness(15 * (255 / 100)); // 15% brightness
             matrix.swapBuffers(true);
             if (local_coord) {
               if (transparent) {
@@ -446,9 +456,109 @@ void loop() {
             }
             matrix.swapBuffers(true);
           }
+          continue;
         }
 
-            
+    
+           if ( (rx_cobID==0x200) && (rxmsg.len==8) && (rxmsg.buf[0]==2) ) {
+          int local_coord = rxmsg.buf[6] & 0x10;
+          int transparent = rxmsg.buf[6] & 0x20;
+          Serial.println("[LED: char]");
+ 
+          if (rxmsg.buf[6]&0x01) {
+            matrix.setFont(font5x7);
+          } else {
+            matrix.setFont(font3x5);
+          }
+//            matrix.fillScreen({0,0,0});
+          matrix.swapBuffers(true);
+          if (local_coord) {
+            if (transparent) {
+              matrix.drawChar( (int)rxmsg.buf[1],(int)rxmsg.buf[2],
+              {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
+              rxmsg.buf[7]);
+            } else {
+              matrix.drawChar( (int)rxmsg.buf[1],(int)rxmsg.buf[2],
+              {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
+              {0,0,0},  // BG color
+              rxmsg.buf[7]);
+            }
+          } else {
+            if (transparent) {
+              matrix.drawChar(
+              (int)rxmsg.buf[1]-(int((nodeID-1)%17)*32),
+              (int)rxmsg.buf[2]-(int((nodeID-1)/17)*32),
+              {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
+              rxmsg.buf[7]);
+            } else {
+              matrix.drawChar(
+              (int)rxmsg.buf[1]-(int((nodeID-1)%17)*32),
+              (int)rxmsg.buf[2]-(int((nodeID-1)/17)*32),
+              {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
+              {0,0,0},  // BG color
+              rxmsg.buf[7]);
+            }
+          }
+            matrix.swapBuffers(true);
+            continue;
+        }
+        
+        
+        if ( (rx_cobID==0x200) && (rxmsg.len==8) && (rxmsg.buf[0]==4) ) {
+          int local_coord = rxmsg.buf[6] & 0x10;
+          int transparent = rxmsg.buf[6] & 0x20;
+          Serial.println("[LED: scrollText]");
+ 
+          if (rxmsg.buf[7]<=phrase_count) {
+          matrix.setScrollMode(wrapForward);
+          matrix.setScrollSpeed((unsigned char)rxmsg.buf[5]);
+          matrix.setScrollOffsetFromTop((int)rxmsg.buf[1]);
+          matrix.setScrollColor({rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]});
+          
+            if (rxmsg.buf[6]&0x01) {
+              matrix.setScrollFont(font5x7);
+            } else {
+              matrix.setScrollFont(font3x5);
+            }
+          matrix.scrollText(phrase[rxmsg.buf[7]],-1); // number scrolls = 1 ?!       
+ 
+ #if 0
+         if (local_coord) {
+              if (transparent) {
+                matrix.drawString( (int)rxmsg.buf[1],(int)rxmsg.buf[2],
+                {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
+                phrase[rxmsg.buf[7]]);
+              } else {
+                matrix.drawString( (int)rxmsg.buf[1],(int)rxmsg.buf[2],
+                {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
+                {0,0,0},  // BG color
+                phrase[rxmsg.buf[7]]);
+              }
+            } else {
+              if (transparent) {
+                matrix.drawString(
+                (int)rxmsg.buf[1]-(int((nodeID-1)%17)*32),
+                (int)rxmsg.buf[2]-(int((nodeID-1)/17)*32),
+                {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
+                phrase[rxmsg.buf[7]]);
+              } else {
+                matrix.drawString(
+                (int)rxmsg.buf[1]-(int((nodeID-1)%17)*32),
+                (int)rxmsg.buf[2]-(int((nodeID-1)/17)*32),
+                {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
+                {0,0,0},  // BG color
+                phrase[rxmsg.buf[7]]);
+              }
+            }
+#endif
+          }
+          continue;
+        }
+
+    
+        
+        
+        
 #if 0
       for (int i = 0; i < 8; i++) {
           frameBuf[bufCount] = rxmsg.buf[i] - 48;
