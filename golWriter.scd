@@ -1,6 +1,6 @@
 (
 p = SerialPort(
-	"/dev/ttyACM1",
+	"/dev/ttyACM0",
 	baudrate: 230400,    //115200, 230400
 	crtscts: false);
 );
@@ -75,62 +75,122 @@ fork{ p.putAll("t200201"++255.asHexString(2)++"\r");}.play // LED brightness (al
 fork{ p.putAll("t200201"++ 20.asHexString(2)++"\r");}.play // LED brightness (all) 20
 
 // ------------------------------------------
-// [LED draw character] 0x200+nodeID cmd=2
-// len 2  bytes 0[cmd] [X] 2[Y] 3[R] 4[G] 5[B] 6[font0-3] 7[char]
+// [LED draw character] 0x280+nodeID cmd=2
+// len 8  bytes 0[cmd] [X] 2[Y] 3[R] 4[G] 5[B] 6[font0-3] 7[char]
 // ------------------------------------------
 // GLOBAL coordinates used
-fork{ p.putAll("t200823C024FF00FF00"++"a".ascii[0].asHexString(2)++"\r");}.play // LED char (all) 0 0xFF,0x00,0xFF with font 0x00 - global coordinates X= 0xC0 (192) Y=0x24 (36) + font (0)
-fork{ p.putAll("t200802C22400FFFF01"++"b".ascii[0].asHexString(2)++"\r");}.play // LED char (all) 0x00,0xFF,0xFF with font 0x01 = global coordinates X= 0xC2 (194) Y=0x24 (36) + font (1)
+fork{ p.putAll("t280802C824FF00FF03"++"A".ascii[0].asHexString(2)++"\r");}.play // LED char (all) 0xFF,0x00,0xFF- global coordinates X= 0xC0 (192) Y=0x24 (36) + font (3)
+fork{ p.putAll("t280802C22400FFFF01"++"b".ascii[0].asHexString(2)++"\r");}.play // LED char (all) 0x00,0xFF,0xFF - global coordinates X= 0xC2 (194) Y=0x24 (36) + font (1)
 
-// LOCAL coordinates used
-fork{ p.putAll("t20080208184F40FF10"++"D".ascii[0].asHexString(2)++"\r");}.play // LED phrase #0 (all) 0 0xFF,0x00,0xFF with font 0x10 = local coordinates(1) + font (0)
-fork{ p.putAll("t20080210184F408F31"++"E".ascii[0].asHexString(2)++"\r");}.play // LED phrase #0 (all) 0 0xFF,0x00,0xFF with font 0x10 = local coordinates(1) + font (0) - transparent
-fork{ p.putAll("t20080218184F404F11"++"J".ascii[0].asHexString(2)++"\r");}.play // LED phrase #0 (all) 0 0xFF,0x00,0xFF with font 0x10 = local coordinates(1) + font (0)
+// LOCAL coordinates used - repeated on all displays if addr 0x280 - else use 0x280+nodeID
+fork{ p.putAll("t28080208184F40FF10"++"D".ascii[0].asHexString(2)++"\r");}.play // LED phrase #0 (all) 0 0xFF,0x00,0xFF with font 0x10 = local coordinates(1) + font (0)
+fork{ p.putAll("t28080210184F408F31"++"E".ascii[0].asHexString(2)++"\r");}.play // LED phrase #0 (all) 0 0xFF,0x00,0xFF with font 0x10 = local coordinates(1) + font (0) - transparent
+fork{ p.putAll("t28080218184F404F11"++"J".ascii[0].asHexString(2)++"\r");}.play // LED phrase #0 (all) 0 0xFF,0x00,0xFF with font 0x10 = local coordinates(1) + font (0)
 
 
 
 // ------------------------------------------
-// [LED phrase] 0x200+nodeID cmd=3
+// [LED phrase] 0x300+nodeID
 // ------------------------------------------
-// len 8  bytes 0[cmd] 1[X] 2[Y] 3[R] 4[G] 5[B] 6[font0-3] 7 [phrase index]
+// len 8  bytes 0[Xh] 1[Xl] 2[Y] 3[R] 4[G] 5[B] 6[font0-3] 7 [phrase index]
 // byte 6 - add 0x10 (bit4) to enable local coordinates for X & Y instead of default global coordinates when this bit is 0
 // byte 6 - add 0x20 (bit5) to set TRANSPARENCY flag - not yet working in SmartMatrix lib
 
 // GLOBAL coordinates used
-fork{ p.putAll("t200803C024FF00FF0000\r");}.play // LED phrase #0 (all) 0 0xFF,0x00,0xFF with font 0x00 - global coordinates X= 0xC0 (192) Y=0x24 (36) + font (0)
-fork{ p.putAll("t200803C22400FFFF0100\r");}.play // LED phrase #0 (all) 0x00,0xFF,0xFF with font 0x01 = global coordinates X= 0xC2 (194) Y=0x24 (36) + font (1)
+fork{ p.putAll("t300800C024FF00FF0000\r");}.play // LED phrase #0 (all) 0 0xFF,0x00,0xFF with font 0x00 - global coordinates X= 0xC0 (192) Y=0x24 (36) + font (0)
+fork{ p.putAll("t300800C22400FFFF0100\r");}.play // LED phrase #0 (all) 0x00,0xFF,0xFF with font 0x01 = global coordinates X= 0xC2 (194) Y=0x24 (36) + font (1)
 
 // LOCAL coordinates used
-fork{ p.putAll("t2008030410FF00FF1000\r");}.play // LED phrase #0 (all) 0 0xFF,0x00,0xFF with font 0x10 = local coordinates(1) + font (0)
-fork{ p.putAll("t2008030410FF00FF3000\r");}.play // LED phrase #0 (all) 0 0xFF,0x00,0xFF with font 0x10 = local coordinates(1) + font (0) - transparent
+fork{ p.putAll("t3008000410FF00FF1000\r");}.play // LED phrase #0 (all) 0 0xFF,0x00,0xFF with font 0x10 = local coordinates(1) + font (0)
+fork{ p.putAll("t3008000410FF00FF3000\r");}.play // LED phrase #0 (all) 0 0xFF,0x00,0xFF with font 0x10 = local coordinates(1) + font (0) - transparent
 
-fork{ p.putAll("t200803020700FFFF1102\r",);}.play // LED phrase #2 (all) 0x00,0xFF,0xFF with font 0x01
-fork{ p.putAll("t200803020700FFFF3102\r",);}.play // LED phrase #2 (all) 0x00,0xFF,0xFF with font 0x01 - transparent
+fork{ p.putAll("t300800020700FFFF1102\r",);}.play // LED phrase #2 (all) 0x00,0xFF,0xFF with font 0x01
+fork{ p.putAll("t300800020700FFFF3102\r",);}.play // LED phrase #2 (all) 0x00,0xFF,0xFF with font 0x01 - transparent
 
-fork{ p.putAll("t200803020200FFFF1102\r");}.play // LED phrase #2 (all) 0x00,0xFF,0xFF with font 0x11 = local coordinates(1) + font (1)
-fork{ p.putAll("t200803020200FFFF3102\r");}.play // LED phrase #2 (all) 0x00,0xFF,0xFF with font 0x11 = local coordinates(1) + font (1) - transparent
+fork{ p.putAll("t300800020200FFFF1102\r");}.play // LED phrase #2 (all) 0x00,0xFF,0xFF with font 0x11 = local coordinates(1) + font (1)
+fork{ p.putAll("t300800020200FFFF3102\r");}.play // LED phrase #2 (all) 0x00,0xFF,0xFF with font 0x11 = local coordinates(1) + font (1) - transparent
 
 
 // ------------------------------------------
-// [LED scrollText] 0x200+nodeID cmd=4
+// [LED scrollText] 0x380+nodeID
 // ------------------------------------------
-// len 8  bytes 0[cmd] 1[startY] 2[R] 3[G] 4[B] 5[speed] 6[font0-3] 7[phrase index]
+// len 8  bytes 0[startX] 1[startY] 2[R] 3[G] 4[B] 5[speed] 6[font0-3] 7[phrase index]
 
 // LOCAL coordinates used
 
-fork{ p.putAll("t200804"++ // LED scroll (all)
+fork{ p.putAll("t380804"++ // LED scroll (all)
 	10.asHexString(2)++ // start Y
 	"FF00FF"++ // RGB
 	20.asHexString(2)++ // speed
 	1.asHexString(2)++ // font
 	0.asHexString(2)++"\r");}.play // phrase
 
-fork{ p.putAll("t200804"++
+fork{ p.putAll("t380804"++
 	24.asHexString(2)++ // start Y
 	"FFFF00"++ // RGB
 	30.asHexString(2)++ // speed
 	2.asHexString(2)++ // font
 	1.asHexString(2)++"\r");}.play // phrase
+
+
+// ------------------------------------------
+// test random draw characters
+// ------------------------------------------
+
+p.putAll("t200400"++"000000"++"\r"); // LED clear display (all) with 0,0,0 color
+
+(
+r = Routine({
+	    var byte, str, val, x_pos, y_pos, color_rgb, char_val, font_val;
+	    1024.do{|i|
+		x_pos = 572.rand; // 192 + (56.rand);
+		y_pos = 184.rand; // 32 + (24.rand);
+		color_rgb = 0xFFFFFF.rand;
+		char_val = 65+(24.rand); // 'A'
+		font_val = 3;
+
+		i.post;
+		" X=".post; x_pos.post;
+		" Y=".post; y_pos.post;
+		" char=".post; char_val.asAscii(0).post;
+		" color=".post; color_rgb.asHexString(6).postln;
+
+		// len 8  bytes 0[Xh] 1[Xl] 2[Y] 3[R] 4[G] 5[B] 6[font0-3] 7[char]
+		// LED char (all) 0x00,0xFF,0xFF with font 0x01 = global coordinates X= 0xC2 (194) Y=0x24 (36) + font (1)
+		//fork {
+			p.putAll("t2808"++x_pos.asHexString(4)++y_pos.asHexString(2)++color_rgb.asHexString(6)++font_val.asHexString(2)++char_val.asHexString(2)++"\r");
+		//}.play;
+
+		0.01.wait;
+	};
+}).play;
+)
+
+
+
+// ------------------------------------------
+// test animate brightness
+// ------------------------------------------
+(
+r = Routine({
+	    var byte, str, val;
+	    255.do{|i|
+		        i.postln;
+		p.putAll("t200201"++(255-i).asHexString(2)++"\r"); // LED brightness (all) 255 (max)
+		0.01.wait;
+		};
+}).play;
+)
+
+
+// ------------------------------------------
+// close serial
+// ------------------------------------------
+p.close;    // close the port
+SerialPort.closeAll;    // close all ports
+
+
+
 
 
 // ------------------------------------------
@@ -155,33 +215,14 @@ f(0x200,8,0,1,2,3,4,5,6,7).postln;
         0.01.wait;
     };
 
-var c = "t" ++ 0x200.asHexString(3) ++ 8.asHexString(1) ++ 3.asHexString(2)
-++ 194.asHexString(2) ++ 40.asHexString(2) // X Y
+var c = "t" ++ 0x280.asHexString(3) ++ 8.asHexString(1)
+++ 194.asHexString(4) ++ 40.asHexString(2) // X Y
 ++ 0xDD.asHexString(2) ++ 0xEE.asHexString(2) ++ 0xFF.asHexString(2) // COLOR
 ++ 1.asHexString(2) ++ 1.asHexString(2) ++ "\r"; // font # (+local/global bit6), phrase #
 postln(c);
 fork{ p.putAll(c); }.play
 
 
-// ------------------------------------------
-// test animate brightness
-// ------------------------------------------
-(
-r = Routine({
-	    var byte, str, val;
-	    255.do{|i|
-		        i.postln;
-		fork{ p.putAll("t200201"++(255-i).asHexString(2)++"\r");}.play; // LED brightness (all) 255 (max)
-		0.01.wait;
-		};
-}).play;
-)
-
-// ------------------------------------------
-// close serial
-// ------------------------------------------
-p.close;    // close the port
-SerialPort.closeAll;    // close all ports
 
 
 

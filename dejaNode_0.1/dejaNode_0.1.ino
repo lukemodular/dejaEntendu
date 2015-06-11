@@ -22,8 +22,8 @@ SmartMatrix matrix;
 
 byte led = 13;
 
-byte fw_version = 3;
-//const char fw_date = "10-jun-2015";
+byte fw_version = 4;
+//const char fw_date = "11-jun-2015";
 
 
 const char* phrase[] = { 
@@ -35,6 +35,7 @@ const char* phrase[] = {
 
 int phrase_count = 4;
 
+//#define DEBUG
 
 //_______________________________________________________________
 //Timing
@@ -312,9 +313,11 @@ void loop() {
       int rx_nodeID = rxmsg.id & 0x07F;
       int rx_cobID = rxmsg.id & 0xF80;  // mask off nodeID
 
+#ifdef DEBUG
       Serial.printf("msg 0x%03x l=%d  nodeID=%d cobID=0x%03x",rxmsg.id, rxmsg.len, rx_nodeID, rx_cobID);
       Serial.println("");
-        
+#endif
+
       	if ((rxmsg.id==0x7FF) && (rxmsg.len==4)) {
 		if ((rxmsg.buf[0]==nodeID) && (rxmsg.buf[1]==1) && (rxmsg.buf[2]==0)  && (rxmsg.buf[3]==0x80)) {
 			jumpBootloader();
@@ -324,18 +327,22 @@ void loop() {
 // ------------ 000h(+nodeID) IDENTIFY--------------------
 
         if ( (rx_cobID==0) && (rxmsg.len==2) && (rxmsg.buf[0]==0) ) {
-          if (rx_nodeID) {
+#ifdef DEBUG
+         if (rx_nodeID) {
             Serial.printf("[IDENTIFY node %d]",rx_nodeID);
             Serial.println("");
           } else {
             Serial.println("[IDENTIFY all]");
           }
+#endif
           identify(rxmsg.buf[1]);
           continue;
         }
 
         if ( (rx_cobID==0) && (rxmsg.len==2) && (rxmsg.buf[0]==1) ) {
+#ifdef DEBUG
           Serial.println("[RESET]");
+#endif
           if (rxmsg.buf[1]) {
             delay(500+(nodeID*10)); // stagger the resets to help with power
           } else {
@@ -350,33 +357,43 @@ void loop() {
 // ------------ 100h(+nodeID) SOUND ---------------------
  
         if ( (rx_cobID==0x100) && (rxmsg.len==3) ) {
+#ifdef DEBUG
           Serial.print("[VOLUME ");
+#endif
           int cmd = rxmsg.buf[0];
           uint32_t val = ((uint32_t)rxmsg.buf[1]<<8) | (uint32_t)rxmsg.buf[2];
           switch (cmd) {
             case 0: // set volume ( val/1000 ) gain
+#ifdef DEBUG
             Serial.print("set] gain ");
             Serial.print((float)(val)/1000.0);
             Serial.println();
+#endif
             mixer1.gain(0,(float)(val)/1000.0);  // 1000 = no gain 1.0             
             break;
             
             case 1: // fadeIn (mS)
+#ifdef DEBUG
             Serial.print("fadeIn] mS: ");
             Serial.print(val);
             Serial.println();
+#endif
             fade1.fadeIn(val);
             break;
             
             case 2: // fadeOut (mS)
+#ifdef DEBUG
             Serial.print("fadeOut] mS: ");
             Serial.print(val);
             Serial.println();
+#endif
             fade1.fadeOut(val);            
             break;
             
             default:
+#ifdef DEBUG
             Serial.println("unrecognized command]");
+#endif
             break;
           }         
   
@@ -384,7 +401,9 @@ void loop() {
         } 
  
         if ( (rx_cobID==0x100) && (rxmsg.buf[0]==3) && (rxmsg.len==6) ) {
+#ifdef DEBUG
           Serial.println("[SOUND noteON]");
+#endif
           waveform1.frequency(rxmsg.buf[1]);
           //waveform1.amplitude(0.3*random(1, 5));
           envelope1.noteOn();
@@ -398,26 +417,91 @@ void loop() {
  
 // ------------ 200h(+nodeID) LED ---------------------
  
- 
         if ( (rx_cobID==0x200) && (rxmsg.len==2) && (rxmsg.buf[0]==1) ) {
+#ifdef DEBUG
           Serial.println("[BRIGHTNESS]");
-          matrix.setBrightness(rxmsg.buf[1]); 
+ #endif
+         matrix.setBrightness(rxmsg.buf[1]); 
           continue;
         } 
         
         if ( (rx_cobID==0x200) && (rxmsg.len==4) && (rxmsg.buf[0]==0) ) {
+#ifdef DEBUG
           Serial.println("[LED: clear display]");
+#endif
           matrix.fillScreen({rxmsg.buf[1],rxmsg.buf[2],rxmsg.buf[3]});
           matrix.swapBuffers(true);
           continue;
         } 
 
-        if ( (rx_cobID==0x200) && (rxmsg.len==8) && (rxmsg.buf[0]==3) ) {
+
+// ------------ 280h(+nodeID) LED display char ---------------------
+
+        if ( (rx_cobID==0x280) && (rxmsg.len==8) ) {
+        int local_coord = rxmsg.buf[6] & 0x10;
+        int transparent = rxmsg.buf[6] & 0x20;
+        int x_pos = (int(rxmsg.buf[0])<<8) | int(rxmsg.buf[1]);
+
+#ifdef DEBUG
+        Serial.println("[LED: char]");
+#endif
+       switch (rxmsg.buf[6]&0x03) {
+         case 0:
+           matrix.setFont(font4x4);
+           break;
+         case 1:
+           matrix.setFont(font4x8_ansi);
+           break;
+         case 2:
+           matrix.setFont(font3x5);
+           break;
+         default:
+           matrix.setFont(font5x7);
+           break;
+        }
+ //       matrix.fillScreen({0,0,0});
+        matrix.swapBuffers(true);
+        if (local_coord) {
+          if (transparent) {
+            matrix.drawChar( (int)rxmsg.buf[1],(int)rxmsg.buf[2],
+            {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
+            rxmsg.buf[7]);
+          } else {
+            matrix.drawChar( (int)rxmsg.buf[1],(int)rxmsg.buf[2],
+            {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
+            {0,0,0},  // BG color
+            rxmsg.buf[7]);
+          }
+        } else {
+          if (transparent) {
+            matrix.drawChar(
+            (int)rxmsg.buf[1]-(int((nodeID-1)%17)*32),
+            (int)rxmsg.buf[2]-(int((nodeID-1)/17)*32),
+            {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
+            rxmsg.buf[7]);
+          } else {
+            matrix.drawChar(
+            (int)rxmsg.buf[1]-(int((nodeID-1)%17)*32),
+            (int)rxmsg.buf[2]-(int((nodeID-1)/17)*32),
+            {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
+            {0,0,0},  // BG color
+            rxmsg.buf[7]);
+          }
+        }
+          matrix.swapBuffers(true);
+          continue;
+      }
+
+// ------------ 300h(+nodeID) LED display phrase ---------------------
+
+        if ( (rx_cobID==0x300) && (rxmsg.len==8)) {
           int local_coord = rxmsg.buf[6] & 0x10;
           int transparent = rxmsg.buf[6] & 0x20;
+          int x_pos = (int(rxmsg.buf[0])<<8) | int(rxmsg.buf[1]);
+
+#ifdef DEBUG
           Serial.println("[LED: phrase]");
-//        Serial.printf("x=%d y=%d\n",(int((nodeID-1)%17)*32),(int((nodeID-1)/17)*32));
- 
+#endif
           if (rxmsg.buf[7]<=phrase_count) {
             switch (rxmsg.buf[6]&0x03) {
                case 0:
@@ -433,16 +517,15 @@ void loop() {
                  matrix.setFont(font5x7);
                  break;
             }
-//            matrix.fillScreen({0,0,0});  // don't erase screen!
-//           matrix.setBrightness(15 * (255 / 100)); // 15% brightness
+
             matrix.swapBuffers(true);
             if (local_coord) {
               if (transparent) {
-                matrix.drawString( (int)rxmsg.buf[1],(int)rxmsg.buf[2],
+                matrix.drawString( x_pos,(int)rxmsg.buf[2],
                 {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
                 phrase[rxmsg.buf[7]]);
               } else {
-                matrix.drawString( (int)rxmsg.buf[1],(int)rxmsg.buf[2],
+                matrix.drawString( x_pos,(int)rxmsg.buf[2],
                 {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
                 {0,0,0},  // BG color
                 phrase[rxmsg.buf[7]]);
@@ -450,13 +533,13 @@ void loop() {
             } else {
               if (transparent) {
                 matrix.drawString(
-                (int)rxmsg.buf[1]-(int((nodeID-1)%17)*32),
+                x_pos-(int((nodeID-1)%17)*32),
                 (int)rxmsg.buf[2]-(int((nodeID-1)/17)*32),
                 {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
                 phrase[rxmsg.buf[7]]);
               } else {
                 matrix.drawString(
-                (int)rxmsg.buf[1]-(int((nodeID-1)%17)*32),
+                x_pos-(int((nodeID-1)%17)*32),
                 (int)rxmsg.buf[2]-(int((nodeID-1)/17)*32),
                 {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
                 {0,0,0},  // BG color
@@ -467,66 +550,16 @@ void loop() {
           }
           continue;
         }
-
     
-           if ( (rx_cobID==0x200) && (rxmsg.len==8) && (rxmsg.buf[0]==2) ) {
+
+// ------------ 380h(+nodeID) LED scrollText ---------------------
+
+        if ( (rx_cobID==0x380) && (rxmsg.len==8) ) {
           int local_coord = rxmsg.buf[6] & 0x10;
           int transparent = rxmsg.buf[6] & 0x20;
-          Serial.println("[LED: char]");
- 
-         switch (rxmsg.buf[6]&0x03) {
-           case 0:
-             matrix.setFont(font4x4);
-             break;
-           case 1:
-             matrix.setFont(font4x8_ansi);
-             break;
-           case 2:
-             matrix.setFont(font3x5);
-             break;
-           default:
-             matrix.setFont(font5x7);
-             break;
-          }
- //       matrix.fillScreen({0,0,0});
-          matrix.swapBuffers(true);
-          if (local_coord) {
-            if (transparent) {
-              matrix.drawChar( (int)rxmsg.buf[1],(int)rxmsg.buf[2],
-              {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
-              rxmsg.buf[7]);
-            } else {
-              matrix.drawChar( (int)rxmsg.buf[1],(int)rxmsg.buf[2],
-              {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
-              {0,0,0},  // BG color
-              rxmsg.buf[7]);
-            }
-          } else {
-            if (transparent) {
-              matrix.drawChar(
-              (int)rxmsg.buf[1]-(int((nodeID-1)%17)*32),
-              (int)rxmsg.buf[2]-(int((nodeID-1)/17)*32),
-              {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
-              rxmsg.buf[7]);
-            } else {
-              matrix.drawChar(
-              (int)rxmsg.buf[1]-(int((nodeID-1)%17)*32),
-              (int)rxmsg.buf[2]-(int((nodeID-1)/17)*32),
-              {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
-              {0,0,0},  // BG color
-              rxmsg.buf[7]);
-            }
-          }
-            matrix.swapBuffers(true);
-            continue;
-        }
-        
-        
-        if ( (rx_cobID==0x200) && (rxmsg.len==8) && (rxmsg.buf[0]==4) ) {
-          int local_coord = rxmsg.buf[6] & 0x10;
-          int transparent = rxmsg.buf[6] & 0x20;
+#ifdef DEBUG
           Serial.println("[LED: scrollText]");
- 
+#endif 
           if (rxmsg.buf[7]<=phrase_count) {
             switch (rxmsg.buf[6]&0x03) {
              case 0:
@@ -548,7 +581,7 @@ void loop() {
             matrix.setScrollOffsetFromTop((int)rxmsg.buf[1]);
   
             matrix.scrollText(phrase[rxmsg.buf[7]],1); // number scrolls = 1  
-//        while (matrix.getScrollStatus());
+            // while (matrix.getScrollStatus());
          }
          continue;
         }
