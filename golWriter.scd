@@ -28,7 +28,7 @@ fork{ p.putAll("t00020100\r");}.play // RESET all
 fork{ p.putAll("t100300"++0.asHexString(4)++"\r");}.play  // VOLUME set (all) 0 = 0 gain
 fork{ p.putAll("t100300"++200.asHexString(4)++"\r");}.play  // VOLUME set (all) 200 = 0.2 gain
 fork{ p.putAll("t100300"++1000.asHexString(4)++"\r");}.play // VOLUME set (all) 1000 = 1.0 gain
-fork{ p.putAll("t100300"++2500.asHexString(4)++"\r");}.play  // VOLUME set (all) 2500 = 2.5 gain
+fork{ p.putAll("t100300"++1500.asHexString(4)++"\r");}.play  // VOLUME set (all) 2500 = 2.5 gain
 
 // [VOLUME fadeIn] 0x100+nodeID cmd=1
 // len 3  bytes 0[cmd] 1-2[mS 16-bit]
@@ -44,9 +44,9 @@ fork{ p.putAll("t100302"++5000.asHexString(4)++"\r");}.play  // VOLUME fadeOut (
 // len 6  bytes 0[cmd] 1[freq] 2[len] 3[amplitude] 4[attack] 5[release]
 
 fork{ p.putAll("t100603"
-	++175.asHexString(2) // freq
-	++200.asHexString(2) // length
-	++100.asHexString(2) // amplitude
+	++20.asHexString(2) // freq
+	++323.asHexString(2) // length
+	++0.asHexString(2) // amplitude
 	++50.asHexString(2) // attack
 	++200.asHexString(2) // release
 	++"\r");}.play
@@ -119,15 +119,15 @@ fork{ p.putAll("t300800020200FFFF3102\r");}.play // LED phrase #2 (all) 0x00,0xF
 // LOCAL coordinates used
 
 fork{ p.putAll("t380804"++ // LED scroll (all)
-	10.asHexString(2)++ // start Y
-	"FF00FF"++ // RGB
+	0.asHexString(2)++ // start Y
+	"FFFFFF"++ // RGB
 	20.asHexString(2)++ // speed
 	1.asHexString(2)++ // font
 	0.asHexString(2)++"\r");}.play // phrase
 
 fork{ p.putAll("t380804"++
 	24.asHexString(2)++ // start Y
-	"FFFF00"++ // RGB
+	"FFFFFF"++ // RGB
 	30.asHexString(2)++ // speed
 	2.asHexString(2)++ // font
 	1.asHexString(2)++"\r");}.play // phrase

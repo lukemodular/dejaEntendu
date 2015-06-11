@@ -283,6 +283,7 @@ void setup() {
 // -------------------------------------------------------------
 void loop() {
 
+digitalWrite(led, 1);
 
   // service software timers based on Metro tick
   if ( sysTimer.check() ) {
@@ -409,7 +410,6 @@ void loop() {
           envelope1.noteOn();
           //noteLength = random(500, 4000);
           noteLength = 100;
-          noteOnTimer = 2000;        //note happend???
           noteOffTimer = noteLength;
           continue;
         }
@@ -586,24 +586,6 @@ void loop() {
          continue;
         }
 
-        
-        
-#if 0
-      for (int i = 0; i < 8; i++) {
-          frameBuf[bufCount] = rxmsg.buf[i] - 48;
-          bufCount++;
-        }
-      }
-    if (bufCount > 1023) {
-        bufCount = 0;
-      }
-    //    for (int i = 0; i < 1024; i++) {
-    //    frameBuf[i] = random(0, 2);
-    //  }
-#endif
-      canTimer = 2;
-    }
-  }
 
   //_________________________________
   //audioNoteOn
@@ -619,44 +601,6 @@ void loop() {
   }
 
   //_________________________________
-  //smartMatrix
-#if 0
-  if (!ledTimer) {
-    int pxlCount = 0;
-    matrix.swapBuffers(true);
-    //matrix.fillScreen(defaultBackgroundColor);
-    //matrix.swapBuffers(true);
-    test = frameBuf[0];
-    for (int x = 0; x < 32; x++) {
-      for (int y = 0; y < 32; y++) {
-        if (frameBuf[pxlCount] == 1) {
-          c_msg = 255;
-          green = map(c_msg, 0, 255, 0, 230);
-          blue = map(c_msg, 0, 255, 0, 240);
-          matrix.drawPixel(x, y, {
-            c_msg, green, blue
-          }
-                          );
-
-        }
-        if (frameBuf[pxlCount] == 0)  {
-          c_msg = 0;
-          green = map(c_msg, 0, 255, 0, 230);
-          blue = map(c_msg, 0, 255, 0, 240);
-          matrix.drawPixel(x, y, {
-            c_msg, green, blue
-          }
-                          );
-
-        }
-        pxlCount++;
-      }
-    }
-    ledTimer = 20;
-  }
-#endif
-
-  //_________________________________
   //audioNoteOff
 
   if (!noteOffTimer) {
@@ -666,6 +610,89 @@ void loop() {
   }
 
 }
+
+  }
+
+
+
+// //_________________________________
+//  //smartMatrix
+//#if 0
+//  if (!ledTimer) {
+//    int pxlCount = 0;
+//    matrix.swapBuffers(true);
+//    //matrix.fillScreen(defaultBackgroundColor);
+//    //matrix.swapBuffers(true);
+//    test = frameBuf[0];
+//    for (int x = 0; x < 32; x++) {
+//      for (int y = 0; y < 32; y++) {
+//        if (frameBuf[pxlCount] == 1) {
+//          c_msg = 255;
+//          green = map(c_msg, 0, 255, 0, 230);
+//          blue = map(c_msg, 0, 255, 0, 240);
+//          matrix.drawPixel(x, y, {
+//            c_msg, green, blue
+//          }
+//                          );
+//
+//        }
+//        if (frameBuf[pxlCount] == 0)  {
+//          c_msg = 0;
+//          green = map(c_msg, 0, 255, 0, 230);
+//          blue = map(c_msg, 0, 255, 0, 240);
+//          matrix.drawPixel(x, y, {
+//            c_msg, green, blue
+//          }
+//                          );
+//
+//        }
+//        pxlCount++;
+//      }
+//    }
+//    ledTimer = 20;
+//  }
+//#endif
+
+
+
+
+// //_________________________________
+//  //smartMatrix
+//#if 0
+//  if (!ledTimer) {
+//    int pxlCount = 0;
+//    matrix.swapBuffers(true);
+//    //matrix.fillScreen(defaultBackgroundColor);
+//    //matrix.swapBuffers(true);
+//    test = frameBuf[0];
+//    for (int x = 0; x < 32; x++) {
+//      for (int y = 0; y < 32; y++) {
+//        if (frameBuf[pxlCount] == 1) {
+//          c_msg = 255;
+//          green = map(c_msg, 0, 255, 0, 230);
+//          blue = map(c_msg, 0, 255, 0, 240);
+//          matrix.drawPixel(x, y, {
+//            c_msg, green, blue
+//          }
+//                          );
+//
+//        }
+//        if (frameBuf[pxlCount] == 0)  {
+//          c_msg = 0;
+//          green = map(c_msg, 0, 255, 0, 230);
+//          blue = map(c_msg, 0, 255, 0, 240);
+//          matrix.drawPixel(x, y, {
+//            c_msg, green, blue
+//          }
+//                          );
+//
+//        }
+//        pxlCount++;
+//      }
+//    }
+//    ledTimer = 20;
+//  }
+//#endif
 
 
 
