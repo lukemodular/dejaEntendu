@@ -77,7 +77,7 @@ fork{ p.putAll("t100603"
 fork{ p.putAll("t200400"++"000000"++"\r");}.play // LED clear display (all) with 0,0,0 color
 fork{ p.putAll("t200400"++"402080"++"\r");}.play // LED clear display (all) with 0x40,0x20,0x80 color
 
-fork{ p.putAll("t2"++33.asHexString(2)++"400"++"000000"++"\r");}.play // LED clear display (all) with 0x40,0x20,0x80 color
+fork{ p.putAll("t2"++40.asHexString(2)++"400"++"000000"++"\r");}.play // LED clear display (all) with 0x40,0x20,0x80 color
 
 
 // ------------------------------------------
@@ -133,44 +133,59 @@ fork{ p.putAll("t200803020200FFFF3102\r");}.play // LED phrase #2 (all) 0x00,0xF
 
 
 // ------------------------------------------
-// [LED scrollText] 0x200+nodeID cmd=4
+// [LED scrollText] 0x380+nodeID
 // ------------------------------------------
-// len 8  bytes 0[cmd] 1[startY] 2[R] 3[G] 4[B] 5[speed] 6[font0..1 | rotation] 7 [phrase index]
-// byte 6 - add 0x10 (bit4) to enable local coordinates for X & Y instead of default global coordinates when this bit is 0
-// byte 6 - add 0x20 (bit5) to set TRANSPARENCY flag - not yet working in SmartMatrix lib
+// len 8  bytes 0[startX] 1[startY] 2[R] 3[G] 4[B] 5[speed] 6[font0-3] 7[phrase index]
 
 // LOCAL coordinates used
-fork{ p.putAll("t200804FF00FF50000000\r");}.play // LED scroll phrase #0 (all) 0 0xFF,0x00,0xFF with font 0x10 = local coordinates(1) + font (0)
+
+fork{ p.putAll("t380804"++ // LED scroll (all)
+	0.asHexString(2)++ // start Y
+	"FFFFFF"++ // RGB
+	20.asHexString(2)++ // speed
+	1.asHexString(2)++ // font
+	0.asHexString(2)++"\r");}.play // phrase
+
+fork{ p.putAll("t380804"++
+	24.asHexString(2)++ // start Y
+	"FFFFFF"++ // RGB
+	30.asHexString(2)++ // speed
+	2.asHexString(2)++ // font
+	1.asHexString(2)++"\r");}.play // phrase
 
 
 // ------------------------------------------
-// misc tests
+// test random clean displays with colors
 // ------------------------------------------
+
+p.putAll("t200400"++"000000"++"\r"); // LED clear display (all) with 0,0,0 color
 
 (
-f = {
-	arg id, len, b0, b1, b2, b3, b4, b5, b6, b7;
-	var c = "t" ++ id.asHexString(3) ++ len.asHexString(1) ++ b0.asHexString(2)
-	++ b1.asHexString(2) ++ b2.sHexString(2) // X Y
-	++ b3.asHexString(2) ++ b4.asHexString(2) ++ b5.asHexString(2) // COLOR
-	++ b6.asHexString(2) ++ b7.asHexString(2) ++ "\r"; // font # (+local/global bit6), phrase #
-	//c.postln;
-	fork{ p.putAll(c); }.play
-}
+r = Routine({
+	var byte, str, val, x_pos, y_pos, color_rgb, char_val, font_val;
+	1024.do{|i|
+		x_pos = 572.rand; // 192 + (56.rand);
+		y_pos = 184.rand; // 32 + (24.rand);
+		color_rgb = 0xFFFFFF.rand;
+		char_val = 65+(24.rand); // 'A'
+		font_val = 3;
+
+		i.post;
+		" X=".post; x_pos.post;
+		" Y=".post; y_pos.post;
+		" char=".post; char_val.asAscii(0).post;
+		" color=".post; color_rgb.asHexString(6).postln;
+
+		// len 8  bytes 0[Xh] 1[Xl] 2[Y] 3[R] 4[G] 5[B] 6[font0-3] 7[char]
+		// LED char (all) 0x00,0xFF,0xFF with font 0x01 = global coordinates X= 0xC2 (194) Y=0x24 (36) + font (1)
+		//fork {
+		p.putAll("t2808"++x_pos.asHexString(4)++y_pos.asHexString(2)++color_rgb.asHexString(6)++font_val.asHexString(2)++char_val.asHexString(2)++"\r");
+		//}.play;
+
+		0.01.wait;
+	};
+}).play;
 )
-f(0x200,8,0,1,2,3,4,5,6,7).postln;
-
-inf.do{|i|
-	p.putAll(Int8Array[32.rand, 32.rand, 8.rand]);
-	0.01.wait;
-};
-
-var c = "t" ++ 0x200.asHexString(3) ++ 8.asHexString(1) ++ 3.asHexString(2)
-++ 194.asHexString(2) ++ 40.asHexString(2) // X Y
-++ 0xDD.asHexString(2) ++ 0xEE.asHexString(2) ++ 0xFF.asHexString(2) // COLOR
-++ 1.asHexString(2) ++ 1.asHexString(2) ++ "\r"; // font # (+local/global bit6), phrase #
-postln(c);
-fork{ p.putAll(c); }.play
 
 
 // ------------------------------------------
@@ -427,23 +442,23 @@ Tdef(\dejaWriter, {
 
 
 
-/*	//lines + seed stable!!!!!!
+	/*	//lines + seed stable!!!!!!
 	preset = (Array.series(cols-2, [1, 1], [1,0])++[[0, 1], [cols-1, 1]]++
-		Array.series(cols-2, [1, 3], [1,0])++[[0, 3], [cols-1, 3]]++
-		Array.series(cols-2, [1, 5], [1,0])++[[0, 5], [cols-1, 5]]++
-		Array.series(cols-2, [1, 7], [1,0])++[[0, 7], [cols-1, 7]]++
-		Array.series(cols-2, [1, 9], [1,0])++[[0, 9], [cols-1, 9]]++
-		Array.series(cols-2, [1, 11], [1,0])++[[0, 11], [cols-1, 11]]++
-		Array.series(cols-2, [1, 13], [1,0])++[[0, 13], [cols-1, 13]]++
-		Array.series(cols-2, [1, 15], [1,0])++[[0, 15], [cols-1, 15]]++
-		Array.series(cols-2, [1, 17], [1,0])++[[0, 17], [cols-1, 17]]++
-		Array.series(cols-2, [1, 19], [1,0])++[[0, 19], [cols-1, 19]]++
-		Array.series(cols-2, [1, 21], [1,0])++[[0, 21], [cols-1, 21]]++
-		Array.series(cols-2, [1, 23], [1,0])++[[0, 23], [cols-1, 23]]++
-		Array.series(cols-2, [1, 25], [1,0])++[[0, 25], [cols-1, 25]]++
-		Array.series(cols-2, [1, 27], [1,0])++[[0, 27], [cols-1, 27]]++
-		Array.series(cols-2, [1, 29], [1,0])++[[0, 29], [cols-1, 29]]++
-		Array.series(cols-2, [1, 31], [1,0])++[[0, 31], [cols-1, 31]]);  //.put((cols*4).rand, [0,0]);*/
+	Array.series(cols-2, [1, 3], [1,0])++[[0, 3], [cols-1, 3]]++
+	Array.series(cols-2, [1, 5], [1,0])++[[0, 5], [cols-1, 5]]++
+	Array.series(cols-2, [1, 7], [1,0])++[[0, 7], [cols-1, 7]]++
+	Array.series(cols-2, [1, 9], [1,0])++[[0, 9], [cols-1, 9]]++
+	Array.series(cols-2, [1, 11], [1,0])++[[0, 11], [cols-1, 11]]++
+	Array.series(cols-2, [1, 13], [1,0])++[[0, 13], [cols-1, 13]]++
+	Array.series(cols-2, [1, 15], [1,0])++[[0, 15], [cols-1, 15]]++
+	Array.series(cols-2, [1, 17], [1,0])++[[0, 17], [cols-1, 17]]++
+	Array.series(cols-2, [1, 19], [1,0])++[[0, 19], [cols-1, 19]]++
+	Array.series(cols-2, [1, 21], [1,0])++[[0, 21], [cols-1, 21]]++
+	Array.series(cols-2, [1, 23], [1,0])++[[0, 23], [cols-1, 23]]++
+	Array.series(cols-2, [1, 25], [1,0])++[[0, 25], [cols-1, 25]]++
+	Array.series(cols-2, [1, 27], [1,0])++[[0, 27], [cols-1, 27]]++
+	Array.series(cols-2, [1, 29], [1,0])++[[0, 29], [cols-1, 29]]++
+	Array.series(cols-2, [1, 31], [1,0])++[[0, 31], [cols-1, 31]]);  //.put((cols*4).rand, [0,0]);*/
 
 
 
@@ -454,13 +469,16 @@ Tdef(\dejaWriter, {
 	i= 0;
 	j= 0;
 	k = 0;
+	l = 0;
+
 	p.putAll("t200400"++"000000"++"\r");
 	0.02.wait;
+
 	loop {
 		i.postln;
-		//p.putAll("t200400"++"000000"++"\r");
 		i= i+1;
 		j= 0;
+
 		//	if(i>=10, {
 		//		~preset.do{|point| envir.put(point[1], point[0], 1)};
 		//		i = 0;
@@ -469,18 +487,22 @@ Tdef(\dejaWriter, {
 		//drawing
 		rows.do{|y|
 			cols.do{|x|
+				if(l == 32, {
+					p.putAll("t2"++l.asHexString(2)++"400"++"000000"++"\r");
+					l = 0;
+				});
 				if(envir.at(y, x)==1, {
 					textItem = genContext[j].asString;
-		p.putAll("t2808"++(x*4).asHexString(4)++(y*8).asHexString(2)++"FFFFEE01"++textItem.ascii[0].asHexString(2)++"\r");
+					p.putAll("t2808"++(x*4).asHexString(4)++(y*8).asHexString(2)++"FFFFEE01"++textItem.ascii[0].asHexString(2)++"\r");
 					0.02.wait;
 				});
-
-/*				if(envir.at(y, x)==0, {
-					p.putAll("t2808"++(x*4).asHexString(4)++(y*8).asHexString(2)++"FFFFEE01"++" ".ascii[0].asHexString(2)++"\r");
-					0.01.wait;
+				/*				if(envir.at(y, x)==0, {
+				p.putAll("t2808"++(x*4).asHexString(4)++(y*8).asHexString(2)++"FFFFEE01"++" ".ascii[0].asHexString(2)++"\r");
+				0.01.wait;
 				});*/
-									j= j+1;
-					if(j>=genContext.size, {j= 0});
+				j= j+1;
+				l = l+1;
+				if(j>=genContext.size, {j=0;});
 			};
 		};
 
