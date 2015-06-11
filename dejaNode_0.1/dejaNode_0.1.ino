@@ -463,11 +463,11 @@ void loop() {
         matrix.swapBuffers(true);
         if (local_coord) {
           if (transparent) {
-            matrix.drawChar( (int)rxmsg.buf[1],(int)rxmsg.buf[2],
+            matrix.drawChar( x_pos,(int)rxmsg.buf[2],
             {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
             rxmsg.buf[7]);
           } else {
-            matrix.drawChar( (int)rxmsg.buf[1],(int)rxmsg.buf[2],
+            matrix.drawChar( x_pos,(int)rxmsg.buf[2],
             {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
             {0,0,0},  // BG color
             rxmsg.buf[7]);
@@ -475,13 +475,13 @@ void loop() {
         } else {
           if (transparent) {
             matrix.drawChar(
-            (int)rxmsg.buf[1]-(int((nodeID-1)%17)*32),
+            x_pos-(int((nodeID-1)%17)*32),
             (int)rxmsg.buf[2]-(int((nodeID-1)/17)*32),
             {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
             rxmsg.buf[7]);
           } else {
             matrix.drawChar(
-            (int)rxmsg.buf[1]-(int((nodeID-1)%17)*32),
+            x_pos-(int((nodeID-1)%17)*32),
             (int)rxmsg.buf[2]-(int((nodeID-1)/17)*32),
             {rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]}, // FG color
             {0,0,0},  // BG color
