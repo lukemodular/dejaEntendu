@@ -585,6 +585,9 @@ digitalWrite(led, 1);
          }
          continue;
         }
+        
+    }
+  }
 
 
   //_________________________________
@@ -609,7 +612,6 @@ digitalWrite(led, 1);
     noteOnTimer = 1000;
   }
 
-}
 
   }
 
