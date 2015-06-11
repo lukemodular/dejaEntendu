@@ -40,16 +40,31 @@ fork{ p.putAll("t100301"++2000.asHexString(4)++"\r");}.play  // VOLUME fadeIn (a
 
 fork{ p.putAll("t100302"++5000.asHexString(4)++"\r");}.play  // VOLUME fadeOut (all) 5000 = 5sec
 
-// [SOUND NoteON] 0x100+nodeID cmd=3
-// len 6  bytes 0[cmd] 1[freq] 2[len] 3[amplitude] 4[attack] 5[release]
+// [SOUND noteOff] 0x100+nodeID cmd=3
+// len 1  bytes 0[cmd]  1-2[mS 16-bit]
 
-fork{ p.putAll("t100603"
-	++175.asHexString(2) // freq
-	++200.asHexString(2) // length
-	++100.asHexString(2) // amplitude
-	++50.asHexString(2) // attack
-	++200.asHexString(2) // release
+fork{ p.putAll("t1003030000"++"\r");}.play  // SOUND noteOff (all) 0mS (immediate)
+
+// [SOUND NoteOn] 0x180+nodeID
+// len 7  bytes 0-1[freq] 2[amplitude] 3-4[length in mS] 5[attack] 6[release]
+
+fork{ p.putAll("t1807"
+	++175.asHexString(4) // freq (0-44100)
+	++80.asHexString(2)   // amplitude 0-255 scaled to 0-1.0
+	++2500.asHexString(4)  // length in mS for noteOffTimer
+	++200.asHexString(2)   // attack in mS * 4 (0-255) becomes 0-1020
+	++50.asHexString(2)  // release in mS * 4 (0-255) becomes 0-1020
 	++"\r");}.play
+
+
+// send NoteOn via OSC CANserial bridge
+var freq, amp, len, attack, release;
+freq = 175;
+amp = 80;
+len = 2500;
+attack = 200;
+release = 50;
+b.sendMsg("/CAN0", 0x180, 7, (freq >> 8) & 0xFF, freq & 0xFF, amp, (len >> 8) & 0xFF, len & 0xFF, attack, release);
 
 
 // ==========================================
@@ -118,15 +133,17 @@ fork{ p.putAll("t300800020200FFFF3102\r");}.play // LED phrase #2 (all) 0x00,0xF
 
 // LOCAL coordinates used
 
-fork{ p.putAll("t380804"++ // LED scroll (all)
-	10.asHexString(2)++ // start Y
+fork{ p.putAll("t3808"++ // LED scroll (all)
+	0.asHexString(2)++ // start offset from left
+	10.asHexString(2)++ // offset from top
 	"FF00FF"++ // RGB
 	20.asHexString(2)++ // speed
 	1.asHexString(2)++ // font
 	0.asHexString(2)++"\r");}.play // phrase
 
-fork{ p.putAll("t380804"++
-	24.asHexString(2)++ // start Y
+fork{ p.putAll("t3808"++
+	10.asHexString(2)++ // start offset from left
+	24.asHexString(2)++ // offset from top
 	"FFFF00"++ // RGB
 	30.asHexString(2)++ // speed
 	2.asHexString(2)++ // font
@@ -210,8 +227,9 @@ r = Routine({
 }).play;
 )
 
-b.sendMsg("/CAN0", 0x200, 2, 1, 15); // 15/255 brightness
+b.sendMsg("/CAN0", 0x000, 2, 0, 1); // identify
 
+b.sendMsg("/CAN0", 0x200, 2, 1, 15); // 15/255 brightness
 
 b.sendMsg("/CAN0", 0x200, 4, 0, 0, 0, 0); // LED clear display (all) with 0,0,0 color
 
@@ -227,19 +245,31 @@ r = Routine({
 		char_val = 65+(24.rand); // 'A'
 		font_val = 3;
 
-		i.post;
-		" X=".post; x_pos.post;
-		" Y=".post; y_pos.post;
-		" char=".post; char_val.asAscii(0).post;
-		" color=".post; color_rgb.asHexString(6).postln;
+//		i.post;
+//		" X=".post; x_pos.post;
+//		" Y=".post; y_pos.post;
+//		" char=".post; char_val.asAscii(0).postln;
 
 		// len 8  bytes 0[Xh] 1[Xl] 2[Y] 3[R] 4[G] 5[B] 6[font0-3] 7[char]
 		// LED char (all) 0x00,0xFF,0xFF with font 0x01 = global coordinates X= 0xC2 (194) Y=0x24 (36) + font (1)
-		b.sendMsg(0x280, 8, (x_pos >> 8) & 0xFF, x_pos & 0xFF, y_pos, color_r, color_g, color_b, font_val, char_val);
-//		0.01.wait;
+		b.sendMsg("/CAN0", 0x280, 8, (x_pos >> 8) & 0xFF, x_pos & 0xFF, y_pos, color_r, color_g, color_b, font_val, char_val);
+		0.0002.wait; // 0.0001 starts giving us less than 1024 packets output
 	};
 }).play;
 )
+
+b.disconnect;
+
+
+// BUNDLE test -- NOT YET WORKING
+; Send bundle now
+
+b.sendBundle(0.2, ["/CAN0", 0x000, 2, 0, 0],["/CAN0", 0x000, 2, 0, 1] ]);
+
+b.sendBundle(0.2,		// our time value is set to 0.2 seconds after the message arrives
+	["/CAN0", "variablesine", 1000, 1, 0, "freq", 200],
+	["/CAN0", "variablesine", 1001, 1, 0, "freq", 300],
+	["/CAN0", "variablesine", 1002, 1, 0, "freq", 400]);
 
 
 // ------------------------------------------

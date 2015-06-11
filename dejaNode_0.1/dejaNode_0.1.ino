@@ -22,7 +22,7 @@ SmartMatrix matrix;
 
 byte led = 13;
 
-byte fw_version = 4;
+byte fw_version = 5;
 //const char fw_date = "11-jun-2015";
 
 
@@ -260,6 +260,7 @@ void setup() {
   //Waveforms: WAVEFORM_SINE, WAVEFORM_SQUARE, WAVEFORM_SAWTOOTH, WAVEFORM_TRIANGLE, WAVEFORM_PULSE, WAVEFORM_ARBITRARY
   //fm1.amplitude(0.5);
   //fm1.frequency(200);
+
   envelope1.attack(5);
   envelope1.hold(0);
   envelope1.decay(2);
@@ -390,6 +391,17 @@ digitalWrite(led, 1);
 #endif
             fade1.fadeOut(val);            
             break;
+
+
+            case 3: // noteOff (mS)
+#ifdef DEBUG
+            Serial.print("[noteOff] mS: ");
+            Serial.print(val);
+            Serial.println();
+#endif
+            noteOffTimer=val;
+            break;
+
             
             default:
 #ifdef DEBUG
@@ -400,16 +412,21 @@ digitalWrite(led, 1);
   
         continue;
         } 
- 
-        if ( (rx_cobID==0x100) && (rxmsg.buf[0]==3) && (rxmsg.len==6) ) {
+
+// ------------ 180h(+nodeID) SOUND noteOn --------------------- 
+// len 7  bytes 0-1[freq] 2[amplitude] 3-4[length in mS] 5[attack] 6[release]
+
+       if ( (rx_cobID==0x180) && (rxmsg.len==7) ) {
+
 #ifdef DEBUG
           Serial.println("[SOUND noteON]");
 #endif
-          waveform1.frequency(rxmsg.buf[1]);
-          //waveform1.amplitude(0.3*random(1, 5));
+          waveform1.frequency( float((rxmsg.buf[0]<<8) | rxmsg.buf[1]));
+          waveform1.amplitude(float(rxmsg.buf[2])/255.0);  // scale 0-255 to 0-1.0
+          envelope1.attack((float)rxmsg.buf[5]*4);
+          envelope1.release((float)rxmsg.buf[6]*4);
           envelope1.noteOn();
-          //noteLength = random(500, 4000);
-          noteLength = 100;
+          noteLength = (rxmsg.buf[3]<<8) | rxmsg.buf[4];
           noteOffTimer = noteLength;
           continue;
         }
@@ -493,6 +510,9 @@ digitalWrite(led, 1);
       }
 
 // ------------ 300h(+nodeID) LED display phrase ---------------------
+// len 8  bytes 0[Xh] 1[Xl] 2[Y] 3[R] 4[G] 5[B] 6[font0-3] 7 [phrase index]
+// byte 6 - add 0x10 (bit4) to enable local coordinates for X & Y instead of default global coordinates when this bit is 0
+// byte 6 - add 0x20 (bit5) to set TRANSPARENCY flag
 
         if ( (rx_cobID==0x300) && (rxmsg.len==8)) {
           int local_coord = rxmsg.buf[6] & 0x10;
@@ -553,6 +573,7 @@ digitalWrite(led, 1);
     
 
 // ------------ 380h(+nodeID) LED scrollText ---------------------
+// len 8  bytes 0[startX] 1[startY] 2[R] 3[G] 4[B] 5[speed] 6[font0-3] 7[phrase index]
 
         if ( (rx_cobID==0x380) && (rxmsg.len==8) ) {
           int local_coord = rxmsg.buf[6] & 0x10;
@@ -575,9 +596,10 @@ digitalWrite(led, 1);
                matrix.setScrollFont(font5x7);
                break;
             }
-            matrix.setScrollColor({rxmsg.buf[3],rxmsg.buf[4],rxmsg.buf[5]});
+            matrix.setScrollColor({rxmsg.buf[2],rxmsg.buf[3],rxmsg.buf[4]});
             matrix.setScrollMode(wrapForward);
             matrix.setScrollSpeed((unsigned char)rxmsg.buf[5]);
+            matrix.setScrollStartOffsetFromLeft((int)rxmsg.buf[0]);
             matrix.setScrollOffsetFromTop((int)rxmsg.buf[1]);
   
             matrix.scrollText(phrase[rxmsg.buf[7]],1); // number scrolls = 1  
@@ -589,27 +611,28 @@ digitalWrite(led, 1);
     }
   }
 
-
+#if 0
   //_________________________________
   //audioNoteOn
 
   if (!noteOnTimer) {
     waveform1.frequency(175 * random(1, 4));
     //waveform1.amplitude(0.3*random(1, 5));
-    envelope1.noteOn();
+//    envelope1.noteOn();
     //noteLength = random(500, 4000);
     noteLength = 100;
     noteOnTimer = 2000;        //note happend???
     noteOffTimer = noteLength;
   }
 
-  //_________________________________
+#endif
+//_________________________________
   //audioNoteOff
 
   if (!noteOffTimer) {
     envelope1.noteOff();
     noteOffTimer = 2000;
-    noteOnTimer = 1000;
+//    noteOnTimer = 1000;
   }
 
 
