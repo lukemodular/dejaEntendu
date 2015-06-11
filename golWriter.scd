@@ -28,7 +28,7 @@ fork{ p.putAll("t00020100\r");}.play // RESET all
 fork{ p.putAll("t100300"++0.asHexString(4)++"\r");}.play  // VOLUME set (all) 0 = 0 gain
 fork{ p.putAll("t100300"++200.asHexString(4)++"\r");}.play  // VOLUME set (all) 200 = 0.2 gain
 fork{ p.putAll("t100300"++1000.asHexString(4)++"\r");}.play // VOLUME set (all) 1000 = 1.0 gain
-fork{ p.putAll("t100300"++1500.asHexString(4)++"\r");}.play  // VOLUME set (all) 2500 = 2.5 gain
+fork{ p.putAll("t100300"++2500.asHexString(4)++"\r");}.play  // VOLUME set (all) 2500 = 2.5 gain
 
 // [VOLUME fadeIn] 0x100+nodeID cmd=1
 // len 3  bytes 0[cmd] 1-2[mS 16-bit]
@@ -44,9 +44,9 @@ fork{ p.putAll("t100302"++5000.asHexString(4)++"\r");}.play  // VOLUME fadeOut (
 // len 6  bytes 0[cmd] 1[freq] 2[len] 3[amplitude] 4[attack] 5[release]
 
 fork{ p.putAll("t100603"
-	++20.asHexString(2) // freq
-	++323.asHexString(2) // length
-	++0.asHexString(2) // amplitude
+	++175.asHexString(2) // freq
+	++200.asHexString(2) // length
+	++100.asHexString(2) // amplitude
 	++50.asHexString(2) // attack
 	++200.asHexString(2) // release
 	++"\r");}.play
@@ -119,15 +119,15 @@ fork{ p.putAll("t300800020200FFFF3102\r");}.play // LED phrase #2 (all) 0x00,0xF
 // LOCAL coordinates used
 
 fork{ p.putAll("t380804"++ // LED scroll (all)
-	0.asHexString(2)++ // start Y
-	"FFFFFF"++ // RGB
+	10.asHexString(2)++ // start Y
+	"FF00FF"++ // RGB
 	20.asHexString(2)++ // speed
 	1.asHexString(2)++ // font
 	0.asHexString(2)++"\r");}.play // phrase
 
 fork{ p.putAll("t380804"++
 	24.asHexString(2)++ // start Y
-	"FFFFFF"++ // RGB
+	"FFFF00"++ // RGB
 	30.asHexString(2)++ // speed
 	2.asHexString(2)++ // font
 	1.asHexString(2)++"\r");}.play // phrase
@@ -190,7 +190,56 @@ p.close;    // close the port
 SerialPort.closeAll;    // close all ports
 
 
+// ------------------------------------------
+// OSC CANserial bridge tests
+// ------------------------------------------
 
+b = NetAddr.new("127.0.0.1", 7110);    // run this once to create the NetAddr
+
+b.sendMsg("/CAN0", 0x200, 8, 0, 1, 2, 3, 4, 5, 6, 7);
+b.sendMsg("/CAN0", 0x200, 8, 0, 1, 2, 3, 4, 5, 6); // wrong length test (l=8 when only 7 arguments)
+
+(
+r = Routine({
+	    var byte, str, val;
+	    255.do{|i|
+		        i.postln;
+		b.sendMsg("/CAN0", 0x200, 2, 1, i); // animate brightness
+		//0.001.wait;
+		};
+}).play;
+)
+
+b.sendMsg("/CAN0", 0x200, 2, 1, 15); // 15/255 brightness
+
+
+b.sendMsg("/CAN0", 0x200, 4, 0, 0, 0, 0); // LED clear display (all) with 0,0,0 color
+
+(
+r = Routine({
+	    var byte, str, val, x_pos, y_pos, color_r, color_g, color_b, char_val, font_val;
+	    1024.do{|i|
+		x_pos = 572.rand; // 192 + (56.rand);
+		y_pos = 184.rand; // 32 + (24.rand);
+		color_r = 0xFF.rand;
+		color_g = 0xFF.rand;
+		color_b = 0xFF.rand;
+		char_val = 65+(24.rand); // 'A'
+		font_val = 3;
+
+		i.post;
+		" X=".post; x_pos.post;
+		" Y=".post; y_pos.post;
+		" char=".post; char_val.asAscii(0).post;
+		" color=".post; color_rgb.asHexString(6).postln;
+
+		// len 8  bytes 0[Xh] 1[Xl] 2[Y] 3[R] 4[G] 5[B] 6[font0-3] 7[char]
+		// LED char (all) 0x00,0xFF,0xFF with font 0x01 = global coordinates X= 0xC2 (194) Y=0x24 (36) + font (1)
+		b.sendMsg(0x280, 8, (x_pos >> 8) & 0xFF, x_pos & 0xFF, y_pos, color_r, color_g, color_b, font_val, char_val);
+//		0.01.wait;
+	};
+}).play;
+)
 
 
 // ------------------------------------------
