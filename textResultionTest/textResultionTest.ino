@@ -1,4 +1,4 @@
-//smartMatrix Font test
+r//smartMatrix Font test
 
 #include <SmartMatrix_32x32.h>
 

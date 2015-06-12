@@ -11,6 +11,13 @@ p = SerialPort(
 );
 
 
+(
+q = SerialPort(
+	"/dev/ttyACM1",
+	baudrate: 230400,    //115200, 230400
+	crtscts: false);
+);
+
 // ------------------------------------------
 // close serial
 // ------------------------------------------
@@ -19,6 +26,82 @@ SerialPort.closeAll;    // close all ports
 SerialPort.clear;
 SerialPort.cleanupAll;
 SerialPort.listDevices;
+
+
+// ------------------------------------------
+// OSC CANserial bridge tests
+// ------------------------------------------
+
+b = NetAddr.new("127.0.0.1", 7110);    // run this once to create the NetAddr
+
+b.sendMsg("/CAN0", 0x200, 8, 0, 1, 2, 3, 4, 5, 6, 7);
+b.sendMsg("/CAN0", 0x200, 8, 0, 1, 2, 3, 4, 5, 6); // wrong length test (l=8 when only 7 arguments)
+
+(
+r = Routine({
+	    var byte, str, val;
+	    1023.do{|i|
+		        i.postln;
+		b.sendMsg("/CAN0", 0x200, 2, 1, 255.rand); // animate brightness
+		0.001.wait;
+		};
+}).play;
+)
+
+b.sendMsg("/CAN0", 0x200, 2, 1, 15); // 15/255 brightness
+b.sendMsg("/CAN0", 0x200, 2, 1, 15);
+
+/////////////////////
+//OSC LED
+
+//OSC clear with color
+b.sendMsg("/CAN0", 0x200, 4, 0, 255, 255, 255); // LED clear display (all) with 0,0,0 color
+b.sendMsg("/CAN0", 0x200, 4, 0, 0, 0, 0);
+
+//write letters
+b.sendMsg("/CAN0", 0x280, 8, (300 >> 8) & 0xFF, 300 & 0xFF, 0, 255, 255, 255, 1, "a".ascii[0]);
+
+
+//scroll
+b.sendMsg("/CAN0", 0x380, 8, 4, 3, 255, 255, 255, 40, 1, 0);
+//adrr, length, command, startY, R, G, B, speed, font, phrase
+
+
+///////////////////
+//OSC sound
+b.sendMsg("/CAN0", 0x100, 3, 0, (0 >> 8) & 0xFF, 0 & 0xFF);
+b.sendMsg("/CAN0", 0x100, 3, 0, (1000 >> 8) & 0xFF, 1500 & 0xFF);
+//  (volume << 8) & 0xFF  pour byte 1 volume & 0xFF pour byte 2
+
+// send NoteOn via OSC CANserial bridge
+var freq, amp, len, attack, release;
+freq = 200;
+amp = 80;
+len = 200;
+attack = 200;
+release = 200;
+b.sendMsg("/CAN0", 0x184, 7, (freq >> 8) & 0xFF, freq & 0xFF, amp, (len >> 8) & 0xFF, len & 0xFF, attack, release);
+b.sendMsg("/CAN0", 0x180, 7, (freq >> 8) & 0xFF, freq & 0xFF, amp, (len >> 8) & 0xFF, len & 0xFF, attack, release);
+
+
+(
+r = Routine({
+	var freq, amp, len, attack, release;
+freq = 200;
+amp = 80;
+len = 200;
+attack = 200;
+release = 200;
+	102.do{|i|
+		i.postln;
+		freq = freq + 1.5.rand;
+		b.sendMsg("/CAN0", 0x180+i+1, 7, (freq >> 8) & 0xFF, freq & 0xFF, amp, (len >> 8) & 0xFF, len & 0xFF, attack, release);
+		rrand(0.01, 0.1).wait;
+	};
+}).play;
+)
+
+
 
 // ==========================================
 // 000h(+nodeID) IDENTIFY
@@ -35,13 +118,6 @@ fork{ p.putAll("t00020100\r");}.play // RESET all
 // 100h(+nodeID) SOUND
 // ==========================================
 
-// [VOLUME set] 0x100+nodeID cmd=0
-// len 3  bytes 0[cmd] 1-2[volume 16-bit]  (volume/1000.0) = gain  (e.g. 1000 = 1.0 gain)
-
-fork{ p.putAll("t100300"++0.asHexString(4)++"\r");}.play  // VOLUME set (all) 0 = 0 gain
-fork{ p.putAll("t100300"++200.asHexString(4)++"\r");}.play  // VOLUME set (all) 200 = 0.2 gain
-fork{ p.putAll("t100300"++1000.asHexString(4)++"\r");}.play // VOLUME set (all) 1000 = 1.0 gain
-fork{ p.putAll("t100300"++2500.asHexString(4)++"\r");}.play  // VOLUME set (all) 2500 = 2.5 gain
 
 // [VOLUME fadeIn] 0x100+nodeID cmd=1
 // len 3  bytes 0[cmd] 1-2[mS 16-bit]
@@ -75,7 +151,7 @@ fork{ p.putAll("t100603"
 // ------------------------------------------
 
 fork{ p.putAll("t200400"++"000000"++"\r");}.play // LED clear display (all) with 0,0,0 color
-fork{ p.putAll("t200400"++"402080"++"\r");}.play // LED clear display (all) with 0x40,0x20,0x80 color
+fork{ q.putAll("t200400"++"402080"++"\r");}.play // LED clear display (all) with 0x40,0x20,0x80 color
 
 fork{ p.putAll("t2"++40.asHexString(2)++"400"++"000000"++"\r");}.play // LED clear display (all) with 0x40,0x20,0x80 color
 
@@ -85,8 +161,8 @@ fork{ p.putAll("t2"++40.asHexString(2)++"400"++"000000"++"\r");}.play // LED cle
 // len 2  bytes 0[cmd] 1[brightness
 // ------------------------------------------
 
-fork{ p.putAll("t200201"++0.asHexString(2)++"\r");}.play // LED brightness (all) 0 (off)
-fork{ p.putAll("t200201"++200.asHexString(2)++"\r");}.play // LED brightness (all) 255 (max)
+fork{ q.putAll("t200201"++0.asHexString(2)++"\r");}.play // LED brightness (all) 0 (off)
+fork{ q.putAll("t200201"++200.asHexString(2)++"\r");}.play // LED brightness (all) 255 (max)
 fork{ p.putAll("t200201"++20.asHexString(2)++"\r");}.play // LED brightness (all) 20
 
 
@@ -132,27 +208,6 @@ fork{ p.putAll("t200803020200FFFF1102\r");}.play // LED phrase #2 (all) 0x00,0xF
 fork{ p.putAll("t200803020200FFFF3102\r");}.play // LED phrase #2 (all) 0x00,0xFF,0xFF with font 0x11 = local coordinates(1) + font (1) - transparent
 
 
-// ------------------------------------------
-// [LED scrollText] 0x380+nodeID
-// ------------------------------------------
-// len 8  bytes 0[startX] 1[startY] 2[R] 3[G] 4[B] 5[speed] 6[font0-3] 7[phrase index]
-
-// LOCAL coordinates used
-
-fork{ p.putAll("t380804"++ // LED scroll (all)
-	0.asHexString(2)++ // start Y
-	"FFFFFF"++ // RGB
-	20.asHexString(2)++ // speed
-	1.asHexString(2)++ // font
-	0.asHexString(2)++"\r");}.play // phrase
-
-fork{ p.putAll("t380804"++
-	24.asHexString(2)++ // start Y
-	"FFFFFF"++ // RGB
-	30.asHexString(2)++ // speed
-	2.asHexString(2)++ // font
-	1.asHexString(2)++"\r");}.play // phrase
-
 
 // ------------------------------------------
 // test random clean displays with colors
@@ -162,27 +217,36 @@ p.putAll("t200400"++"000000"++"\r"); // LED clear display (all) with 0,0,0 color
 
 (
 r = Routine({
-	var byte, str, val, x_pos, y_pos, color_rgb, char_val, font_val;
+	var byte, str, val, node, color_rgb;
 	1024.do{|i|
-		x_pos = 572.rand; // 192 + (56.rand);
-		y_pos = 184.rand; // 32 + (24.rand);
+		node = 103.rand;
 		color_rgb = 0xFFFFFF.rand;
-		char_val = 65+(24.rand); // 'A'
-		font_val = 3;
 
 		i.post;
-		" X=".post; x_pos.post;
-		" Y=".post; y_pos.post;
-		" char=".post; char_val.asAscii(0).post;
+		" node=".post; node.post;
 		" color=".post; color_rgb.asHexString(6).postln;
 
-		// len 8  bytes 0[Xh] 1[Xl] 2[Y] 3[R] 4[G] 5[B] 6[font0-3] 7[char]
-		// LED char (all) 0x00,0xFF,0xFF with font 0x01 = global coordinates X= 0xC2 (194) Y=0x24 (36) + font (1)
-		//fork {
-		p.putAll("t2808"++x_pos.asHexString(4)++y_pos.asHexString(2)++color_rgb.asHexString(6)++font_val.asHexString(2)++char_val.asHexString(2)++"\r");
-		//}.play;
+		p.putAll("t2"++node.asHexString(2)++"400"++color_rgb.asHexString(6)++"\r");
 
-		0.01.wait;
+		0.1.wait;
+	};
+}).play;
+)
+
+(
+r = Routine({
+	var byte, str, val, node, white;
+	1024.do{|i|
+		node = 103.rand;
+		white = 0xFF.rand;
+
+		i.post;
+		" node=".post; node.post;
+		" color=".post; white.asHexString(2).postln;
+
+		p.putAll("t2"++node.asHexString(2)++"400"++white.asHexString(2)++white.asHexString(2)++white.asHexString(2)++"\r");
+
+		0.1.wait;
 	};
 }).play;
 )
@@ -470,8 +534,9 @@ Tdef(\dejaWriter, {
 	j= 0;
 	k = 0;
 	l = 0;
+	c = 0;
 
-	p.putAll("t200400"++"000000"++"\r");
+	b.sendMsg("/CAN0", 0x200, 4, 0, 0, 0, 0);
 	0.02.wait;
 
 	loop {
@@ -487,21 +552,21 @@ Tdef(\dejaWriter, {
 		//drawing
 		rows.do{|y|
 			cols.do{|x|
-				if(l == 32, {
-					p.putAll("t2"++l.asHexString(2)++"400"++"000000"++"\r");
+/*				if(l == 3, {
+						b.sendMsg("/CAN0", 0x200+x, 4, 0, 0, 0, 0);
 					l = 0;
-				});
+				});*/
+				c = 55.rand + 200;
 				if(envir.at(y, x)==1, {
 					textItem = genContext[j].asString;
-					p.putAll("t2808"++(x*4).asHexString(4)++(y*8).asHexString(2)++"FFFFEE01"++textItem.ascii[0].asHexString(2)++"\r");
+					b.sendMsg("/CAN0", 0x280, 8, ((x*4) >> 8) & 0xFF, (x*4) & 0xFF, (y*8), c, c, c, 1, textItem.ascii[0]);
 					0.02.wait;
 				});
-				/*				if(envir.at(y, x)==0, {
-				p.putAll("t2808"++(x*4).asHexString(4)++(y*8).asHexString(2)++"FFFFEE01"++" ".ascii[0].asHexString(2)++"\r");
-				0.01.wait;
-				});*/
+				if(envir.at(y, x)==0, {
+				b.sendMsg("/CAN0", 0x280, 8, ((x*4) >> 8) & 0xFF, (x*4) & 0xFF, (y*8), 255, 255, 255, 1, " ".ascii[0]);
+				0.02.wait;
+				});
 				j= j+1;
-				l = l+1;
 				if(j>=genContext.size, {j=0;});
 			};
 		};
@@ -537,11 +602,3 @@ Tdef(\dejaWriter, {
 	};
 });
 );
-
-Tdef(\x, {
-	var doThat, doThis = [1,2,3].choose;
-	doThis.postln;
-	1.wait;
-	doThat = [1,2,3].choose;
-	doThat.postln;
-	loop { 0.5.wait; "aaaaaaaaaaaaaazz".scramble.postln } }).play;

@@ -236,7 +236,7 @@ b.sendMsg("/CAN0", 0x200, 4, 0, 0, 0, 0); // LED clear display (all) with 0,0,0 
 (
 r = Routine({
 	    var byte, str, val, x_pos, y_pos, color_r, color_g, color_b, char_val, font_val;
-	    1024.do{|i|
+	    20000.do{|i|
 		x_pos = 572.rand; // 192 + (56.rand);
 		y_pos = 184.rand; // 32 + (24.rand);
 		color_r = 0xFF.rand;
